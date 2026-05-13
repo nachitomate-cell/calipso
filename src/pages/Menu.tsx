@@ -3,6 +3,7 @@ import { getCategories, getMenuItems } from '../lib/api'
 import type { Category, MenuItem } from '../types'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { AlertCircle } from 'lucide-react'
+import { PHOTOS } from '../lib/images'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -291,8 +292,29 @@ export default function Menu() {
     <div style={{ background: PAPER, minHeight: '100vh' }}>
 
       {/* ── Dark header section ─────────────────────────────── */}
-      <div style={{ background: INK, paddingTop: '68px' }}>
-        <div className="max-w-3xl mx-auto px-6 pt-12 pb-0 text-center relative">
+      <div style={{ position: 'relative', background: INK, paddingTop: '68px', overflow: 'hidden' }}>
+        {/* Background photo with overlay */}
+        {PHOTOS.menuHero && (
+          <>
+            <img
+              src={PHOTOS.menuHero}
+              alt=""
+              aria-hidden="true"
+              onError={e => { e.currentTarget.style.display = 'none' }}
+              style={{
+                position: 'absolute', inset: 0,
+                width: '100%', height: '100%',
+                objectFit: 'cover', objectPosition: 'center',
+              }}
+            />
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(to bottom, rgba(28,43,45,0.55), rgba(28,43,45,0.75))',
+            }} />
+          </>
+        )}
+
+        <div className="max-w-3xl mx-auto px-6 pt-12 pb-0 text-center relative" style={{ zIndex: 1 }}>
 
           {/* Language toggle — top right */}
           <div className="absolute top-14 right-6 flex gap-1">

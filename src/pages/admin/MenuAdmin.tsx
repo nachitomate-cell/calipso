@@ -5,6 +5,7 @@ import { PageLoader } from '../../components/ui/LoadingSpinner'
 import Modal from '../../components/ui/Modal'
 import Badge from '../../components/ui/Badge'
 import { Input, TextArea, Select } from '../../components/ui/Input'
+import ImageUpload from '../../components/ui/ImageUpload'
 import { Plus, Pencil, Trash2, Eye, EyeOff, Star } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -218,12 +219,14 @@ export default function MenuAdmin() {
                 onChange={e => setItemForm(f => ({ ...f, description: e.target.value }))}
               />
             </div>
-            <Input
-              label="URL de imagen"
-              placeholder="https://…"
-              value={itemForm.image_url ?? ''}
-              onChange={e => setItemForm(f => ({ ...f, image_url: e.target.value }))}
-            />
+            <div className="col-span-2">
+              <ImageUpload
+                currentUrl={itemForm.image_url}
+                itemId={itemModal.item?.id}
+                onUpload={url => setItemForm(f => ({ ...f, image_url: url }))}
+                onClear={() => setItemForm(f => ({ ...f, image_url: undefined }))}
+              />
+            </div>
             <Input
               label="Orden de aparición"
               type="number"

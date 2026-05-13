@@ -1,142 +1,230 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, MapPin, Clock } from 'lucide-react'
+import Carousel from '../components/ui/Carousel'
+import { PHOTOS } from '../lib/images'
+
+const INK = '#1C2B2D'
+const CALIPSO = '#29B5D0'
 
 export default function Home() {
   return (
-    <div className="min-h-screen font-body">
-      {/* ── Hero ──────────────────────────────────────────── */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-calipso">
-        {/* Subtle wave texture */}
-        <div className="absolute inset-0 opacity-10 pointer-events-none"
-          style={{
-            backgroundImage: `repeating-linear-gradient(
-              -45deg,
-              transparent,
-              transparent 40px,
-              rgba(255,255,255,0.03) 40px,
-              rgba(255,255,255,0.03) 80px
-            )`,
-          }}
-        />
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-arena-light to-transparent" />
+    <div style={{ minHeight: '100vh', fontFamily: 'Jost, system-ui, sans-serif' }}>
 
-        <div className="relative z-10 text-center px-4 max-w-3xl mx-auto animate-fade-in">
-          <p className="text-white/70 text-xs tracking-[0.3em] uppercase mb-8 font-body font-light">
-            Concón, Chile · Cocina de Mar
+      {/* ── Hero Carousel ────────────────────────────────────── */}
+      <Carousel
+        slides={PHOTOS.carousel}
+        interval={5000}
+        fadeDuration={800}
+        style={{ minHeight: '100svh', paddingTop: '68px' } as React.CSSProperties}
+        className="flex flex-col"
+      >
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-16">
+          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '10px', letterSpacing: '0.35em', textTransform: 'uppercase', fontFamily: 'Jost, sans-serif', fontWeight: 400, marginBottom: '20px' }}>
+            Concón, Chile &nbsp;·&nbsp; Cocina de Mar
           </p>
-          <h1 className="font-display text-6xl sm:text-7xl md:text-9xl text-white font-bold italic leading-none mb-4">
+          <h1 style={{
+            fontFamily: '"Cormorant Garamond", Georgia, serif',
+            fontStyle: 'italic',
+            fontWeight: 300,
+            fontSize: 'clamp(64px, 12vw, 110px)',
+            color: 'white',
+            lineHeight: 1,
+            marginBottom: '8px',
+          }}>
             Calipso
           </h1>
-          <p className="font-display text-white/60 text-xl italic mb-10">Restaurant</p>
-          <p className="text-white/75 text-base sm:text-lg max-w-lg mx-auto leading-relaxed mb-10 font-light">
-            El océano en su expresión más pura. Mariscos frescos del Pacífico,
-            técnica depurada y una terraza frente al mar.
+          <p style={{
+            fontFamily: '"Cormorant Garamond", Georgia, serif',
+            fontStyle: 'italic',
+            fontWeight: 300,
+            fontSize: '18px',
+            color: 'rgba(255,255,255,0.50)',
+            marginBottom: '36px',
+            letterSpacing: '0.15em',
+          }}>
+            Restaurant
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div style={{ width: '40px', height: '1.5px', background: CALIPSO, margin: '0 auto 32px' }} />
+          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '14px', maxWidth: '380px', lineHeight: 1.75, fontWeight: 300, marginBottom: '40px' }}>
+            El océano en su expresión más pura. Mariscos frescos del Pacífico,
+            técnica depurada y terraza frente al mar.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               to="/carta"
-              className="inline-flex items-center justify-center gap-2 border-2 border-white/60 hover:border-white text-white font-medium px-8 py-3.5 rounded-card transition-all duration-200 text-sm tracking-wide uppercase"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                border: '1.5px solid rgba(255,255,255,0.45)',
+                color: 'white', fontWeight: 400, padding: '12px 28px',
+                borderRadius: '4px', textDecoration: 'none',
+                fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase',
+                transition: 'all 200ms ease',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = 'white')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.45)')}
             >
-              Ver la Carta <ArrowRight size={15} />
+              Ver la Carta <ArrowRight size={13} />
             </Link>
             <Link
               to="/reservas"
-              className="inline-flex items-center justify-center gap-2 bg-coral hover:bg-coral-hover text-white font-semibold px-8 py-3.5 rounded-card transition-all duration-200 hover:shadow-brand-md text-sm tracking-wide uppercase"
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                background: '#E8593C', color: 'white', fontWeight: 500,
+                padding: '12px 28px', borderRadius: '4px', textDecoration: 'none',
+                fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase',
+                transition: 'background 200ms ease',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#C04828')}
+              onMouseLeave={e => (e.currentTarget.style.background = '#E8593C')}
             >
               Reservar una mesa
             </Link>
           </div>
         </div>
 
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 opacity-40">
-          <div className="w-px h-10 bg-white mx-auto animate-bounce" />
-        </div>
-      </section>
+        {/* Bottom fade to white */}
+        <div style={{ height: '80px', background: 'linear-gradient(to bottom, transparent, #FDFAF5)', flexShrink: 0 }} />
+      </Carousel>
 
-      {/* ── Propuesta de valor ─────────────────────────────── */}
-      <section className="bg-arena py-20 px-4">
-        <div className="max-w-6xl mx-auto">
+      {/* ── Propuesta de valor ─────────────────────────────────── */}
+      <section style={{ background: '#FDFAF5', padding: '72px 24px' }}>
+        <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              {
-                icon: '🌊',
-                title: 'Del Océano a tu Mesa',
-                desc: 'Trabajamos directamente con pescadores artesanales de Caleta Higuerillas y Quintero.',
-              },
-              {
-                icon: '👨‍🍳',
-                title: 'Técnica de Autor',
-                desc: 'Cocina chilena contemporánea con influencias nikkei y mediterráneas.',
-              },
-              {
-                icon: '🌅',
-                title: 'Terraza Frente al Mar',
-                desc: 'Disfruta el atardecer del Pacífico desde nuestra terraza sobre las rocas.',
-              },
+              { icon: '🌊', title: 'Del Océano a tu Mesa', desc: 'Trabajamos directamente con pescadores artesanales de Caleta Higuerillas y Quintero.' },
+              { icon: '👨‍🍳', title: 'Técnica de Autor',    desc: 'Cocina chilena contemporánea con influencias nikkei y mediterráneas.' },
+              { icon: '🌅', title: 'Terraza Frente al Mar', desc: 'Disfruta el atardecer del Pacífico desde nuestra terraza sobre las rocas.' },
             ].map(({ icon, title, desc }) => (
-              <div key={title} className="text-center p-8 bg-white rounded-card shadow-brand hover:shadow-brand-md transition-shadow duration-200">
-                <div className="text-5xl mb-5">{icon}</div>
-                <h3 className="font-display text-xl text-ink font-bold mb-3">{title}</h3>
-                <p className="text-ink-secondary text-sm leading-relaxed">{desc}</p>
+              <div key={title} style={{ textAlign: 'center', padding: '32px 24px', background: 'white', borderRadius: '4px', border: '1px solid rgba(28,43,45,0.07)' }}>
+                <div style={{ fontSize: '44px', marginBottom: '16px' }}>{icon}</div>
+                <h3 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 400, fontSize: '22px', color: INK, marginBottom: '12px' }}>
+                  {title}
+                </h3>
+                <p style={{ fontSize: '13px', color: 'rgba(28,43,45,0.55)', lineHeight: 1.7, fontWeight: 300 }}>
+                  {desc}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Platos destacados ─────────────────────────────── */}
-      <section className="bg-white py-20 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <p className="text-calipso text-xs tracking-[0.25em] uppercase font-body mb-3">Temporada</p>
-            <h2 className="font-display text-4xl text-ink font-bold italic">Platos de Temporada</h2>
-            <div className="w-16 h-px bg-calipso mx-auto mt-4 opacity-40" />
+      {/* ── Sobre el restaurante (grid asimétrico con fotos) ───── */}
+      {(PHOTOS.aboutLarge || PHOTOS.aboutSmall) && (
+        <section style={{ background: INK, padding: '0' }}>
+          <div className="grid grid-cols-1 md:grid-cols-[70%_30%]" style={{ minHeight: '380px' }}>
+            {/* Foto grande */}
+            <div style={{ position: 'relative', minHeight: '280px' }}>
+              {PHOTOS.aboutLarge ? (
+                <img
+                  src={PHOTOS.aboutLarge}
+                  alt="Interior de Calipso Restaurant con comensales"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  onError={e => { e.currentTarget.style.display = 'none' }}
+                />
+              ) : (
+                <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.04)', minHeight: '280px' }} />
+              )}
+            </div>
+            {/* Foto pequeña */}
+            <div style={{ position: 'relative', minHeight: '200px' }}>
+              {PHOTOS.aboutSmall ? (
+                <img
+                  src={PHOTOS.aboutSmall}
+                  alt="Detalle artístico — Calipso Restaurant"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  onError={e => { e.currentTarget.style.display = 'none' }}
+                />
+              ) : (
+                <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.02)', minHeight: '200px' }} />
+              )}
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        </section>
+      )}
+
+      {/* ── Platos destacados ─────────────────────────────────── */}
+      <section style={{ background: 'white', padding: '72px 24px' }}>
+        <div className="max-w-5xl mx-auto">
+          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <p style={{ color: CALIPSO, fontSize: '10px', letterSpacing: '0.35em', textTransform: 'uppercase', fontWeight: 400, marginBottom: '12px' }}>
+              Temporada
+            </p>
+            <h2 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 300, fontSize: '38px', color: INK, marginBottom: '0' }}>
+              Platos de Temporada
+            </h2>
+            <div style={{ width: '40px', height: '1.5px', background: CALIPSO, margin: '16px auto 0', opacity: 0.5 }} />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px" style={{ border: '1px solid rgba(28,43,45,0.08)', background: 'rgba(28,43,45,0.08)' }}>
             {[
-              { emoji: '🦞', name: 'Langosta a la Plancha', desc: 'Con mantequilla de ajo, papas doradas y rúcula', price: '$42.900' },
-              { emoji: '🐙', name: 'Pulpo a la Brasa', desc: 'Sobre hummus de garbanzos, aceite de pimentón ahumado', price: '$12.900' },
-              { emoji: '🍚', name: 'Arroz Meloso de Mariscos', desc: 'Bisque, langostinos, almejas, azafrán y alioli negro', price: '$19.900' },
-            ].map(({ emoji, name, desc, price }) => (
-              <div key={name} className="group bg-white rounded-card shadow-brand border border-calipso/10 overflow-hidden hover:-translate-y-0.5 hover:shadow-brand-md transition-all duration-200">
-                <div className="bg-calipso-50 aspect-[4/3] flex items-center justify-center text-7xl group-hover:scale-105 transition-transform duration-300">
-                  {emoji}
-                </div>
-                <div className="p-5">
-                  <h3 className="font-display text-lg text-ink font-bold">{name}</h3>
-                  <p className="text-ink-secondary text-sm mt-1 leading-relaxed">{desc}</p>
-                  <p className="text-calipso font-semibold text-base mt-3">{price}</p>
-                </div>
+              { name: 'Langosta a la Plancha',      desc: 'Mantequilla de ajo, papas doradas y rúcula',          price: '$42.900' },
+              { name: 'Pulpo a la Brasa',            desc: 'Hummus de garbanzos, aceite de pimentón ahumado',    price: '$12.900' },
+              { name: 'Arroz Meloso de Mariscos',    desc: 'Bisque, langostinos, almejas, azafrán y alioli negro', price: '$19.900' },
+            ].map(({ name, desc, price }) => (
+              <div key={name} style={{ background: '#FDFAF5', padding: '28px 24px' }}>
+                <h3 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 400, fontSize: '20px', color: INK, marginBottom: '8px' }}>
+                  {name}
+                </h3>
+                <p style={{ fontSize: '12px', color: 'rgba(28,43,45,0.50)', lineHeight: 1.6, fontWeight: 300, marginBottom: '14px' }}>
+                  {desc}
+                </p>
+                <p style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontWeight: 400, fontSize: '17px', color: CALIPSO }}>
+                  {price}
+                </p>
               </div>
             ))}
           </div>
-          <div className="text-center mt-10">
+
+          <div style={{ textAlign: 'center', marginTop: '36px' }}>
             <Link
               to="/carta"
-              className="inline-flex items-center gap-2 border border-calipso text-calipso hover:bg-calipso hover:text-white font-medium px-6 py-2.5 rounded-card transition-all duration-200 text-sm uppercase tracking-wide"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                border: `1.5px solid ${CALIPSO}`, color: CALIPSO,
+                padding: '10px 24px', borderRadius: '4px', textDecoration: 'none',
+                fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 400,
+                transition: 'all 200ms ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = CALIPSO; e.currentTarget.style.color = 'white' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = CALIPSO }}
             >
-              Ver carta completa <ArrowRight size={14} />
+              Ver carta completa <ArrowRight size={12} />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ── CTA Reserva ─────────────────────────────────────── */}
-      <section className="bg-calipso-700 py-20 px-4 text-center">
-        <div className="max-w-xl mx-auto">
-          <p className="text-white/60 text-xs tracking-[0.25em] uppercase mb-4 font-body">¿Listo para vivir la experiencia?</p>
-          <h2 className="font-display text-4xl md:text-5xl text-white font-bold italic mb-6">
+      {/* ── CTA Reservas ──────────────────────────────────────── */}
+      <section style={{ background: INK, padding: '72px 24px', textAlign: 'center' }}>
+        <div style={{ maxWidth: '480px', margin: '0 auto' }}>
+          <p style={{ color: 'rgba(255,255,255,0.40)', fontSize: '10px', letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: '16px' }}>
+            ¿Listo para vivir la experiencia?
+          </p>
+          <h2 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 300, fontSize: '40px', color: 'white', marginBottom: '24px' }}>
             Reserva tu Mesa
           </h2>
-          <div className="flex flex-wrap justify-center gap-6 text-white/60 text-sm mb-8 font-light">
-            <span className="flex items-center gap-2"><MapPin size={13} /> Av. Borgoño 14900, Concón</span>
-            <span className="flex items-center gap-2"><Clock size={13} /> Mar–Dom 13:00–23:30</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '20px', color: 'rgba(255,255,255,0.40)', fontSize: '11px', marginBottom: '32px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <MapPin size={12} /> Av. Borgoño 14900, Concón
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Clock size={12} /> Mar–Dom 13:00–23:30
+            </span>
           </div>
           <Link
             to="/reservas"
-            className="inline-flex items-center gap-2 bg-coral hover:bg-coral-hover text-white font-semibold px-10 py-4 rounded-card transition-all duration-200 hover:shadow-brand-md text-sm tracking-wide uppercase"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+              background: '#E8593C', color: 'white',
+              padding: '14px 32px', borderRadius: '4px', textDecoration: 'none',
+              fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 500,
+              transition: 'background 200ms ease',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#C04828')}
+            onMouseLeave={e => (e.currentTarget.style.background = '#E8593C')}
           >
-            Hacer Reserva <ArrowRight size={15} />
+            Hacer Reserva <ArrowRight size={13} />
           </Link>
         </div>
       </section>
