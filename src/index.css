@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #1C2B2D;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+}
+
+@layer components {
+  /* Calipso brand separator */
+  .separator-brand {
+    @apply border-calipso/20;
+    border-width: 0.5px;
+  }
+
+  /* Skeleton loader */
+  .skeleton {
+    @apply bg-status-cleaning animate-pulse-soft rounded-card;
+  }
+
+  /* Toast */
+  .toast-brand {
+    @apply fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-calipso text-white px-6 py-3 rounded-card shadow-brand-lg text-sm font-medium animate-slide-up;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .font-display {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+}
