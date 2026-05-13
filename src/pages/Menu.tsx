@@ -1,86 +1,235 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getCategories, getMenuItems } from '../lib/api'
 import type { Category, MenuItem } from '../types'
-import { PageLoader } from '../components/ui/LoadingSpinner'
+import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { AlertCircle } from 'lucide-react'
-import clsx from 'clsx'
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatPrice(price: number) {
   return `$${price.toLocaleString('es-CL')}`
 }
 
-const allergenLabels: Record<string, string> = {
-  pescado: 'Pescado', moluscos: 'Moluscos', crustaceos: 'Crustáceos',
-  gluten: 'Gluten', lacteos: 'Lácteos', huevos: 'Huevos',
-  nueces: 'Frutos secos', soja: 'Soja',
+// ── Type tokens ──────────────────────────────────────────────────────────────
+
+const T = {
+  heading:     { fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 300 } as React.CSSProperties,
+  dishName:    { fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 400, fontSize: '18px' } as React.CSSProperties,
+  price:       { fontFamily: '"Cormorant Garamond", Georgia, serif', fontWeight: 400, fontSize: '17px' } as React.CSSProperties,
+  label:       { fontFamily: 'Jost, system-ui, sans-serif', fontWeight: 400, letterSpacing: '0.25em', textTransform: 'uppercase' as const },
+  desc:        { fontFamily: 'Jost, system-ui, sans-serif', fontWeight: 300, fontSize: '11.5px', lineHeight: 1.65 } as React.CSSProperties,
+  ui:          { fontFamily: 'Jost, system-ui, sans-serif', fontWeight: 400 } as React.CSSProperties,
+  catNav:      { fontFamily: 'Jost, system-ui, sans-serif', fontWeight: 400, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase' as const },
 }
 
-function AllergenTag({ allergen }: { allergen: string }) {
+const INK       = '#1C2B2D'
+const INK55     = 'rgba(28,43,45,0.55)'
+const INK08     = 'rgba(28,43,45,0.08)'
+const INK20DOT  = 'rgba(28,43,45,0.20)'
+const CALIPSO   = '#29B5D0'
+const PAPER     = '#FDFAF5'
+const HOVER_BG  = '#F7F2E8'
+
+// ── Allergen badge component ──────────────────────────────────────────────────
+
+const allergenConfig: Record<string, { label: string; bg: string; color: string }> = {
+  gluten:     { label: 'Contiene gluten',  bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
+  lacteos:    { label: 'Contiene lácteos', bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
+  moluscos:   { label: 'Moluscos',         bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
+  crustaceos: { label: 'Crustáceos',       bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
+  pescado:    { label: 'Pescado',          bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
+  nueces:     { label: 'Frutos secos',     bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
+  huevos:     { label: 'Huevos',           bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
+  soja:       { label: 'Soja',             bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
+}
+
+function AllergenBadge({ allergen }: { allergen: string }) {
+  const cfg = allergenConfig[allergen]
+  if (!cfg) return null
   return (
-    <span className="text-[10px] px-2 py-0.5 rounded-full border border-calipso-200 text-calipso-700 font-medium">
-      {allergenLabels[allergen] ?? allergen}
+    <span style={{
+      ...T.label,
+      fontSize: '9px',
+      letterSpacing: '0.15em',
+      background: cfg.bg,
+      color: cfg.color,
+      padding: '2px 6px',
+      borderRadius: '2px',
+    }}>
+      {cfg.label}
     </span>
   )
 }
 
-function MenuCard({ item }: { item: MenuItem }) {
+// ── Featured "Plato del día" — full-width dark card ──────────────────────────
+
+function FeaturedCard({ item }: { item: MenuItem }) {
   return (
-    <div className={clsx(
-      'bg-white rounded-card shadow-brand border border-transparent overflow-hidden transition-all duration-200 group',
-      item.is_available
-        ? 'hover:-translate-y-0.5 hover:shadow-brand-md hover:border-calipso/10'
-        : 'opacity-50'
-    )}>
-      {/* Image placeholder — 4:3 ratio */}
-      {item.image_url ? (
+    <div
+      className="col-span-full"
+      style={{
+        background: INK,
+        padding: '24px 28px',
+        borderTop: `1px solid ${INK08}`,
+        borderBottom: `1px solid ${INK08}`,
+      }}
+    >
+      {/* Label */}
+      <p style={{ ...T.label, fontSize: '9px', letterSpacing: '0.25em', color: CALIPSO, marginBottom: '12px' }}>
+        — Plato del día —
+      </p>
+
+      {/* Image if present */}
+      {item.image_url && (
         <img
           src={item.image_url}
           alt={item.name}
-          className="w-full aspect-[4/3] object-cover"
+          style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 0, display: 'block', marginBottom: '16px' }}
         />
-      ) : (
-        <div className="w-full aspect-[4/3] bg-calipso-50 flex items-center justify-center text-5xl">
-          🍽️
-        </div>
       )}
 
-      <div className="p-5">
-        {/* Name + badges */}
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <h3 className="font-display text-ink font-bold text-[17px] leading-snug flex-1">{item.name}</h3>
-          <div className="flex-shrink-0 flex flex-col items-end gap-1">
-            {item.is_featured && (
-              <span className="text-[10px] bg-calipso text-white px-2.5 py-0.5 rounded-full font-medium uppercase tracking-wide">
-                Plato del día
-              </span>
-            )}
-            {!item.is_available && (
-              <span className="text-[10px] bg-coral text-white px-2.5 py-0.5 rounded-full font-medium">
-                Sin stock
-              </span>
-            )}
-          </div>
-        </div>
-
-        {item.description && (
-          <p className="text-ink-secondary text-sm leading-relaxed">{item.description}</p>
-        )}
-
-        {item.allergens.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-3">
-            {item.allergens.map(a => <AllergenTag key={a} allergen={a} />)}
-          </div>
-        )}
-
-        <div className="flex items-center justify-between mt-4 pt-3 border-t border-calipso/10">
-          <span className="font-semibold text-calipso text-lg tabular-nums">
-            {formatPrice(item.price)}
-          </span>
-        </div>
+      {/* Name + price row */}
+      <div className="flex items-baseline gap-3">
+        <span style={{ ...T.dishName, fontSize: '22px', color: 'white', fontWeight: 300 }}>
+          {item.name}
+        </span>
+        <div className="flex-1" style={{ borderBottom: `1px dotted rgba(255,255,255,0.15)`, marginBottom: '4px' }} />
+        <span style={{ ...T.price, fontSize: '19px', color: CALIPSO }}>
+          {formatPrice(item.price)}
+        </span>
       </div>
+
+      {/* Description */}
+      {item.description && (
+        <p style={{ ...T.desc, color: 'rgba(255,255,255,0.5)', marginTop: '8px' }}>
+          {item.description}
+        </p>
+      )}
+
+      {/* Allergens */}
+      {item.allergens.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {item.allergens.map(a => (
+            <span key={a} style={{
+              ...T.label,
+              fontSize: '9px',
+              letterSpacing: '0.12em',
+              background: 'rgba(255,255,255,0.08)',
+              color: 'rgba(255,255,255,0.4)',
+              padding: '2px 6px',
+              borderRadius: '2px',
+            }}>
+              {allergenConfig[a]?.label ?? a}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
+
+// ── Standard dish row — print-style ─────────────────────────────────────────
+
+function DishRow({ item, isLast }: { item: MenuItem; isLast: boolean }) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: '16px 20px',
+        borderBottom: isLast ? 'none' : `1px solid ${INK08}`,
+        background: !item.is_available ? PAPER : hovered ? HOVER_BG : PAPER,
+        opacity: item.is_available ? 1 : 0.45,
+        transition: 'background 150ms ease',
+      }}
+    >
+      {/* Image (optional) */}
+      {item.image_url && (
+        <img
+          src={item.image_url}
+          alt={item.name}
+          style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 0, display: 'block', marginBottom: '12px' }}
+        />
+      )}
+
+      {/* Name ··· Price row */}
+      <div className="flex items-baseline gap-2">
+        <span style={{ ...T.dishName, color: INK, flexShrink: 0, maxWidth: '55%' }}>
+          {item.name}
+        </span>
+        {/* Dotted leader */}
+        <div
+          className="flex-1"
+          style={{ borderBottom: `1px dotted ${INK20DOT}`, minWidth: '24px', marginBottom: '3px' }}
+        />
+        <span style={{ ...T.price, color: INK, flexShrink: 0 }}>
+          {formatPrice(item.price)}
+        </span>
+      </div>
+
+      {/* Description */}
+      {item.description && (
+        <p style={{ ...T.desc, color: INK55, marginTop: '5px' }}>
+          {item.description}
+        </p>
+      )}
+
+      {/* Tags row */}
+      {(item.allergens.length > 0 || !item.is_available) && (
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {!item.is_available && (
+            <span style={{
+              ...T.label,
+              fontSize: '9px',
+              letterSpacing: '0.15em',
+              background: 'rgba(232,89,60,0.10)',
+              color: '#993C1D',
+              padding: '2px 6px',
+              borderRadius: '2px',
+            }}>
+              Sin stock
+            </span>
+          )}
+          {item.allergens.map(a => <AllergenBadge key={a} allergen={a} />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Section ornament ──────────────────────────────────────────────────────────
+
+function Ornament() {
+  return (
+    <div className="text-center py-8">
+      <span style={{ color: CALIPSO, opacity: 0.4, letterSpacing: '8px', fontSize: '14px' }}>· · ·</span>
+    </div>
+  )
+}
+
+// ── Section divider ───────────────────────────────────────────────────────────
+
+function SectionDivider({ name }: { name: string }) {
+  return (
+    <div className="flex items-center gap-4 px-5 py-2">
+      <div className="flex-1" style={{ borderBottom: `1px solid ${INK08}` }} />
+      <span style={{
+        ...T.label,
+        fontSize: '10px',
+        letterSpacing: '0.35em',
+        color: INK,
+        opacity: 0.4,
+      }}>
+        {name}
+      </span>
+      <div className="flex-1" style={{ borderBottom: `1px solid ${INK08}` }} />
+    </div>
+  )
+}
+
+// ── Main Menu page ────────────────────────────────────────────────────────────
 
 export default function Menu() {
   const [categories, setCategories] = useState<Category[]>([])
@@ -88,6 +237,9 @@ export default function Menu() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeCategory, setActiveCategory] = useState<string>('all')
+  const [lang, setLang] = useState<'es' | 'en'>('es')
+  const navRef = useRef<HTMLDivElement>(null)
+  const [navSticky, setNavSticky] = useState(false)
 
   useEffect(() => {
     Promise.all([getCategories(), getMenuItems()])
@@ -96,106 +248,251 @@ export default function Menu() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return (
-    <div className="min-h-screen bg-calipso-50 pt-[68px]"><PageLoader /></div>
-  )
+  useEffect(() => {
+    const onScroll = () => {
+      if (!navRef.current) return
+      setNavSticky(window.scrollY > navRef.current.offsetTop - 68)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
-  if (error) return (
-    <div className="min-h-screen bg-calipso-50 pt-[68px] flex items-center justify-center">
-      <div className="text-center p-8">
-        <AlertCircle size={44} className="text-coral mx-auto mb-4" />
-        <p className="font-display text-ink text-xl font-bold mb-1">No pudimos cargar la carta</p>
-        <p className="text-ink-secondary text-sm">{error}</p>
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: PAPER, paddingTop: '68px' }}>
+      <div className="text-center space-y-4">
+        <LoadingSpinner size="md" />
+        <p style={{ ...T.label, fontSize: '10px', letterSpacing: '0.25em', color: INK55 }}>Cargando la carta…</p>
       </div>
     </div>
   )
 
-  const filteredItems = activeCategory === 'all'
-    ? items
-    : items.filter(i => i.category_id === activeCategory)
+  if (error) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: PAPER, paddingTop: '68px' }}>
+      <div className="text-center p-8 space-y-3">
+        <AlertCircle size={36} style={{ color: '#993C1D', margin: '0 auto' }} />
+        <p style={{ ...T.heading, fontSize: '22px', color: INK }}>No pudimos cargar la carta</p>
+        <p style={{ ...T.desc, color: INK55 }}>{error}</p>
+      </div>
+    </div>
+  )
 
-  const itemsByCategory = categories
+  const filtered = activeCategory === 'all' ? items : items.filter(i => i.category_id === activeCategory)
+
+  const sections = categories
     .filter(c => activeCategory === 'all' || c.id === activeCategory)
-    .map(cat => ({ ...cat, items: filteredItems.filter(i => i.category_id === cat.id) }))
-    .filter(c => c.items.length > 0)
+    .map(cat => ({
+      ...cat,
+      featured: filtered.filter(i => i.category_id === cat.id && i.is_featured),
+      standard: filtered.filter(i => i.category_id === cat.id && !i.is_featured),
+    }))
+    .filter(s => s.featured.length + s.standard.length > 0)
 
   return (
-    <div className="min-h-screen bg-calipso-50 font-body">
-      {/* Header */}
-      <div className="bg-calipso pt-[68px] pb-14 px-4 text-center">
-        <p className="text-white/60 text-[10px] tracking-[0.3em] uppercase mb-4 font-light">Cocina de Mar</p>
-        <h1 className="font-display text-5xl md:text-7xl text-white font-bold italic">La Carta</h1>
-        <div className="w-12 h-px bg-white/30 mx-auto mt-5" />
-        <p className="text-white/50 text-xs mt-4 max-w-sm mx-auto">
-          Carta de temporada · Precios incluyen IVA · Consulte alergias a su garzón
-        </p>
-      </div>
+    <div style={{ background: PAPER, minHeight: '100vh' }}>
 
-      {/* Category filter bar */}
-      <div className="sticky top-[68px] z-30 bg-white/95 backdrop-blur-sm border-b border-calipso/10 shadow-brand">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex gap-1 overflow-x-auto py-3 scrollbar-hide">
-            <button
-              onClick={() => setActiveCategory('all')}
-              className={clsx(
-                'flex-shrink-0 px-4 py-2 rounded-card text-sm font-medium transition-all duration-200',
-                activeCategory === 'all'
-                  ? 'bg-calipso text-white shadow-brand'
-                  : 'text-ink-secondary hover:text-calipso hover:bg-calipso-50'
-              )}
-            >
-              Todo
-            </button>
-            {categories.map(cat => (
+      {/* ── Dark header section ─────────────────────────────── */}
+      <div style={{ background: INK, paddingTop: '68px' }}>
+        <div className="max-w-3xl mx-auto px-6 pt-12 pb-0 text-center relative">
+
+          {/* Language toggle — top right */}
+          <div className="absolute top-14 right-6 flex gap-1">
+            {(['es', 'en'] as const).map(l => (
               <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={clsx(
-                  'flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-card text-sm font-medium transition-all duration-200',
-                  activeCategory === cat.id
-                    ? 'bg-calipso text-white shadow-brand'
-                    : 'text-ink-secondary hover:text-calipso hover:bg-calipso-50'
-                )}
+                key={l}
+                onClick={() => setLang(l)}
+                style={{
+                  ...T.ui,
+                  fontSize: '10px',
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
+                  padding: '4px 9px',
+                  borderRadius: '2px',
+                  border: lang === l ? 'none' : `1px solid rgba(28,43,45,0.15)`,
+                  background: lang === l ? 'rgba(255,255,255,0.12)' : 'transparent',
+                  color: lang === l ? 'white' : 'rgba(255,255,255,0.35)',
+                  cursor: 'pointer',
+                  transition: 'all 150ms ease',
+                }}
               >
-                {cat.icon && <span>{cat.icon}</span>}
-                {cat.name}
+                {l}
               </button>
             ))}
           </div>
+
+          {/* Logo wordmark */}
+          <p style={{ ...T.heading, fontSize: '42px', color: 'white', lineHeight: 1.1, marginBottom: '4px' }}>
+            Calipso
+          </p>
+          <p style={{ ...T.label, fontSize: '10px', letterSpacing: '0.35em', color: CALIPSO }}>
+            RESTAURANT
+          </p>
+
+          {/* Decorative line */}
+          <div style={{ width: '60px', height: '1.5px', background: CALIPSO, margin: '14px auto 14px' }} />
+
+          {/* Tagline */}
+          <p style={{ ...T.ui, fontSize: '11px', color: 'rgba(255,255,255,0.40)', letterSpacing: '0.08em', marginBottom: '32px' }}>
+            Primera línea costera &nbsp;·&nbsp; Concón, Chile
+          </p>
         </div>
+
+        {/* ── Category nav ─────────────────────────────────── */}
+        <div ref={navRef} style={{ background: INK, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="max-w-3xl mx-auto px-4">
+            <div className="flex overflow-x-auto scrollbar-hide">
+              <button
+                onClick={() => setActiveCategory('all')}
+                style={{
+                  ...T.catNav,
+                  flexShrink: 0,
+                  padding: '14px 16px',
+                  color: activeCategory === 'all' ? CALIPSO : 'rgba(255,255,255,0.40)',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: activeCategory === 'all' ? `2px solid ${CALIPSO}` : '2px solid transparent',
+                  cursor: 'pointer',
+                  transition: 'all 150ms ease',
+                }}
+              >
+                {lang === 'en' ? 'All' : 'Todo'}
+              </button>
+              {categories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  style={{
+                    ...T.catNav,
+                    flexShrink: 0,
+                    padding: '14px 16px',
+                    color: activeCategory === cat.id ? CALIPSO : 'rgba(255,255,255,0.40)',
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: activeCategory === cat.id ? `2px solid ${CALIPSO}` : '2px solid transparent',
+                    cursor: 'pointer',
+                    transition: 'all 150ms ease',
+                  }}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Sticky shadow nav clone */}
+        {navSticky && (
+          <div
+            className="fixed top-[68px] left-0 right-0 z-40"
+            style={{ background: INK, borderBottom: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}
+          >
+            <div className="max-w-3xl mx-auto px-4">
+              <div className="flex overflow-x-auto scrollbar-hide">
+                <button
+                  onClick={() => setActiveCategory('all')}
+                  style={{
+                    ...T.catNav,
+                    flexShrink: 0, padding: '12px 14px',
+                    color: activeCategory === 'all' ? CALIPSO : 'rgba(255,255,255,0.40)',
+                    background: 'none', border: 'none',
+                    borderBottom: activeCategory === 'all' ? `2px solid ${CALIPSO}` : '2px solid transparent',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {lang === 'en' ? 'All' : 'Todo'}
+                </button>
+                {categories.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    style={{
+                      ...T.catNav,
+                      flexShrink: 0, padding: '12px 14px',
+                      color: activeCategory === cat.id ? CALIPSO : 'rgba(255,255,255,0.40)',
+                      background: 'none', border: 'none',
+                      borderBottom: activeCategory === cat.id ? `2px solid ${CALIPSO}` : '2px solid transparent',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Menu sections */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
-        {itemsByCategory.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">🌊</div>
-            <p className="text-ink-secondary font-display italic text-lg">No hay platos en esta categoría.</p>
+      {/* ── Menu content ──────────────────────────────────── */}
+      <div className="max-w-3xl mx-auto">
+        {sections.length === 0 ? (
+          <div className="text-center py-24">
+            <p style={{ ...T.heading, fontSize: '20px', color: INK55 }}>No hay platos en esta categoría</p>
           </div>
         ) : (
-          itemsByCategory.map(cat => (
-            <section key={cat.id} id={`cat-${cat.slug}`} className="animate-fade-in">
-              <div className="flex items-center gap-4 mb-8">
-                {cat.icon && <span className="text-3xl">{cat.icon}</span>}
-                <div>
-                  <h2 className="font-display text-2xl md:text-3xl text-ink font-bold italic">{cat.name}</h2>
-                  {cat.description && (
-                    <p className="text-ink-secondary text-sm mt-0.5">{cat.description}</p>
-                  )}
-                </div>
-                <div className="flex-1 h-px bg-calipso/15 ml-2" />
+          sections.map((section, sIdx) => (
+            <section key={section.id} id={`sec-${section.slug}`}>
+              {/* Ornament before section (except first) */}
+              {sIdx > 0 && <Ornament />}
+
+              {/* Section divider */}
+              <SectionDivider name={section.name} />
+
+              {/* Category heading */}
+              <div className="text-center py-6 px-6">
+                <h2 style={{ ...T.heading, fontSize: '32px', color: INK, lineHeight: 1.1 }}>
+                  {section.name}
+                </h2>
+                {section.description && (
+                  <p style={{ ...T.desc, color: INK55, marginTop: '6px', fontSize: '12px' }}>
+                    {section.description}
+                  </p>
+                )}
               </div>
-              {/* 1 col mobile / 2 tablet / 3 desktop */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {cat.items.map(item => <MenuCard key={item.id} item={item} />)}
+
+              {/* Items grid — 2 col desktop, 1 col mobile */}
+              <div
+                className="grid grid-cols-1 md:grid-cols-2"
+                style={{ borderTop: `1px solid ${INK08}`, borderLeft: `1px solid ${INK08}`, background: PAPER }}
+              >
+                {/* Featured items — full width */}
+                {section.featured.map(item => (
+                  <FeaturedCard key={item.id} item={item} />
+                ))}
+
+                {/* Standard items */}
+                {section.standard.map((item) => {
+                  return (
+                    <div
+                      key={item.id}
+                      style={{ borderRight: `1px solid ${INK08}`, borderBottom: `1px solid ${INK08}` }}
+                    >
+                      <DishRow item={item} isLast={false} />
+                    </div>
+                  )
+                })}
               </div>
             </section>
           ))
         )}
 
-        <p className="text-center text-ink-secondary/40 text-xs pb-4">
-          Carta sujeta a disponibilidad de producto · Informe alergias a su garzón
-        </p>
+        {/* ── Footer of carta ────────────────────────────── */}
+        <footer className="text-center py-14 px-6" style={{ borderTop: `1px solid ${INK08}` }}>
+          <div style={{ width: '40px', height: '1.5px', background: CALIPSO, margin: '0 auto 20px' }} />
+
+          <p style={{ ...T.label, fontSize: '11px', letterSpacing: '0.15em', color: INK, opacity: 0.35, marginBottom: '4px' }}>
+            AV. BORGOÑO 14900 &nbsp;·&nbsp; CONCÓN &nbsp;·&nbsp; +56 9 8765 4321
+          </p>
+          <p style={{ ...T.label, fontSize: '10px', letterSpacing: '0.1em', color: INK, opacity: 0.28, marginBottom: '20px' }}>
+            MAR–VIE 13:00–23:00 &nbsp;·&nbsp; SÁB–DOM 12:30–23:30
+          </p>
+
+          <div style={{ width: '40px', height: '1.5px', background: CALIPSO, margin: '0 auto 20px' }} />
+
+          <p style={{ ...T.ui, fontSize: '10px', color: INK, opacity: 0.45, maxWidth: '380px', margin: '0 auto', lineHeight: 1.7 }}>
+            Carta sujeta a disponibilidad del producto. Informe a su garzón sobre alergias o
+            intolerancias alimentarias. Precios incluyen IVA.
+          </p>
+        </footer>
       </div>
     </div>
   )

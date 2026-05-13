@@ -50,6 +50,9 @@ export default {
       fontFamily: {
         display: ['"Playfair Display"', 'Georgia', 'serif'],
         body: ['Inter', 'system-ui', 'sans-serif'],
+        // Editorial carta
+        editorial: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        jost: ['Jost', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         card: '12px',
