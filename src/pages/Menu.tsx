@@ -90,12 +90,12 @@ function FeaturedCard({ item }: { item: MenuItem }) {
       )}
 
       {/* Name + price row */}
-      <div className="flex items-baseline gap-3">
-        <span style={{ ...T.dishName, fontSize: '22px', color: 'white', fontWeight: 300 }}>
+      <div className="flex items-baseline gap-3" style={{ minWidth: 0 }}>
+        <span style={{ ...T.dishName, fontSize: '22px', color: 'white', fontWeight: 300, flexShrink: 1, minWidth: 0, maxWidth: '65%' }}>
           {item.name}
         </span>
-        <div className="flex-1" style={{ borderBottom: `1px dotted rgba(255,255,255,0.15)`, marginBottom: '4px' }} />
-        <span style={{ ...T.price, fontSize: '19px', color: CALIPSO }}>
+        <div className="flex-1" style={{ borderBottom: `1px dotted rgba(255,255,255,0.15)`, marginBottom: '4px', flexShrink: 0, minWidth: '20px' }} />
+        <span style={{ ...T.price, fontSize: '19px', color: CALIPSO, flexShrink: 0, whiteSpace: 'nowrap' }}>
           {formatPrice(item.price)}
         </span>
       </div>
@@ -143,7 +143,8 @@ function DishRow({ item, isLast }: { item: MenuItem; isLast: boolean }) {
         borderBottom: isLast ? 'none' : `1px solid ${INK08}`,
         background: !item.is_available ? PAPER : hovered ? HOVER_BG : PAPER,
         opacity: item.is_available ? 1 : 0.45,
-        transition: 'background 150ms ease',
+        transition: 'all 250ms ease',
+        boxShadow: hovered && item.is_available ? 'inset 2px 0 0 #29B5D0' : 'inset 2px 0 0 transparent',
       }}
     >
       {/* Image (optional) */}
@@ -156,16 +157,17 @@ function DishRow({ item, isLast }: { item: MenuItem; isLast: boolean }) {
       )}
 
       {/* Name ··· Price row */}
-      <div className="flex items-baseline gap-2">
-        <span style={{ ...T.dishName, color: INK, flexShrink: 0, maxWidth: '55%' }}>
+      <div className="flex items-baseline gap-2" style={{ minWidth: 0 }}>
+        {/* min-w-0 permite que flex items se encojan por debajo de su contenido natural */}
+        <span style={{ ...T.dishName, color: INK, flexShrink: 1, minWidth: 0, maxWidth: '62%' }}>
           {item.name}
         </span>
         {/* Dotted leader */}
         <div
           className="flex-1"
-          style={{ borderBottom: `1px dotted ${INK20DOT}`, minWidth: '24px', marginBottom: '3px' }}
+          style={{ borderBottom: `1px dotted ${INK20DOT}`, minWidth: '20px', marginBottom: '3px', flexShrink: 0 }}
         />
-        <span style={{ ...T.price, color: INK, flexShrink: 0 }}>
+        <span style={{ ...T.price, color: INK, flexShrink: 0, whiteSpace: 'nowrap' }}>
           {formatPrice(item.price)}
         </span>
       </div>

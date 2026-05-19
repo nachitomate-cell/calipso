@@ -18,7 +18,7 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 const label = 'block text-[13px] font-medium text-calipso-700 uppercase tracking-[0.08em] mb-1'
-const base = 'w-full rounded-input border border-calipso-200 px-4 py-2.5 text-sm text-ink placeholder:text-ink-secondary/70 focus:outline-none focus:ring-2 focus:ring-calipso focus:border-transparent transition-all duration-200 bg-white'
+const base = 'w-full rounded-input border border-calipso-200 px-4 py-2.5 text-sm text-ink placeholder:text-ink-secondary/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-calipso focus-visible:ring-offset-1 focus:border-transparent transition-all duration-200 bg-white'
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label: lbl, error, className, ...props }, ref) => (

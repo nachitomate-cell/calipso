@@ -106,6 +106,7 @@ export default function Carousel({
               key={i}
               onClick={() => setCurrent(i)}
               aria-label={`Ir a slide ${i + 1}`}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#29B5D0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1C2B2D] rounded-full"
               style={{
                 width: i === current ? '24px' : '6px',
                 height: '6px',

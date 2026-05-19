@@ -138,15 +138,21 @@ export default function Home() {
 
       {/* ── Sobre el restaurante (grid asimétrico con fotos) ───── */}
       {(PHOTOS.aboutLarge || PHOTOS.aboutSmall) && (
-        <section style={{ background: INK, padding: '0' }}>
-          <div className="grid grid-cols-1 md:grid-cols-[70%_30%]" style={{ minHeight: '380px' }}>
+        <section style={{ background: '#101C1E', padding: '0' }}>
+          {/* gap-px: la línea oscura entre celdas actúa como separador editorial */}
+          <div className="grid grid-cols-1 md:grid-cols-[70%_30%] gap-px" style={{ minHeight: '380px' }}>
             {/* Foto grande */}
-            <div style={{ position: 'relative', minHeight: '280px' }}>
+            <div style={{ position: 'relative', minHeight: '280px', overflow: 'hidden' }}>
               {PHOTOS.aboutLarge ? (
                 <img
                   src={PHOTOS.aboutLarge}
                   alt="Interior de Calipso Restaurant con comensales"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  style={{
+                    width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+                    transition: 'transform 600ms ease',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
                   onError={e => { e.currentTarget.style.display = 'none' }}
                 />
               ) : (
@@ -154,12 +160,17 @@ export default function Home() {
               )}
             </div>
             {/* Foto pequeña */}
-            <div style={{ position: 'relative', minHeight: '200px' }}>
+            <div style={{ position: 'relative', minHeight: '200px', overflow: 'hidden' }}>
               {PHOTOS.aboutSmall ? (
                 <img
                   src={PHOTOS.aboutSmall}
                   alt="Detalle artístico — Calipso Restaurant"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  style={{
+                    width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+                    transition: 'transform 600ms ease',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
                   onError={e => { e.currentTarget.style.display = 'none' }}
                 />
               ) : (

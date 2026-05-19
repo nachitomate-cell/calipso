@@ -169,6 +169,7 @@ export default function Reservations() {
                 </p>
                 <button
                   onClick={() => setSuccess(false)}
+                  className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#29B5D0] focus-visible:ring-offset-2 rounded"
                   style={{ color: CALIPSO, fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', background: 'none', border: 'none', cursor: 'pointer' }}
                 >
                   Hacer otra reserva
@@ -220,6 +221,7 @@ export default function Reservations() {
                 <button
                   type="submit"
                   disabled={loading}
+                  className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8593C] focus-visible:ring-offset-2"
                   style={{
                     background: loading ? 'rgba(232,89,60,0.6)' : '#E8593C',
                     color: 'white', border: 'none', cursor: loading ? 'default' : 'pointer',
