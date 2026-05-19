@@ -44,19 +44,14 @@ const allergenConfig: Record<string, { label: string; bg: string; color: string 
   soja:       { label: 'Soja',             bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
 }
 
-function AllergenBadge({ allergen }: { allergen: string }) {
+function AllergenBadge({ allergen, variant = 'light' }: { allergen: string; variant?: 'light' | 'dark' }) {
   const cfg = allergenConfig[allergen]
   if (!cfg) return null
+  const cls = variant === 'dark'
+    ? 'bg-white/10 text-white/55 border-white/20'
+    : 'bg-amber-50 text-amber-700 border-amber-200'
   return (
-    <span style={{
-      ...T.label,
-      fontSize: '9px',
-      letterSpacing: '0.15em',
-      background: cfg.bg,
-      color: cfg.color,
-      padding: '2px 6px',
-      borderRadius: '2px',
-    }}>
+    <span className={`inline-flex items-center text-[10px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${cls}`}>
       {cfg.label}
     </span>
   )
@@ -111,17 +106,7 @@ function FeaturedCard({ item }: { item: MenuItem }) {
       {item.allergens.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-3">
           {item.allergens.map(a => (
-            <span key={a} style={{
-              ...T.label,
-              fontSize: '9px',
-              letterSpacing: '0.12em',
-              background: 'rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.4)',
-              padding: '2px 6px',
-              borderRadius: '2px',
-            }}>
-              {allergenConfig[a]?.label ?? a}
-            </span>
+            <AllergenBadge key={a} allergen={a} variant="dark" />
           ))}
         </div>
       )}
@@ -183,15 +168,7 @@ function DishRow({ item, isLast }: { item: MenuItem; isLast: boolean }) {
       {(item.allergens.length > 0 || !item.is_available) && (
         <div className="flex flex-wrap gap-1.5 mt-3">
           {!item.is_available && (
-            <span style={{
-              ...T.label,
-              fontSize: '9px',
-              letterSpacing: '0.15em',
-              background: 'rgba(232,89,60,0.10)',
-              color: '#993C1D',
-              padding: '2px 6px',
-              borderRadius: '2px',
-            }}>
+            <span className="inline-flex items-center text-[10px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded-full border bg-coral-light text-coral-dark border-coral/20">
               Sin stock
             </span>
           )}
@@ -363,9 +340,10 @@ export default function Menu() {
         {/* ── Category nav ─────────────────────────────────── */}
         <div ref={navRef} style={{ background: INK, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="max-w-3xl mx-auto px-4">
-            <div className="flex overflow-x-auto scrollbar-hide">
+            <div className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth">
               <button
                 onClick={() => setActiveCategory('all')}
+                className="snap-center"
                 style={{
                   ...T.catNav,
                   flexShrink: 0,
@@ -384,6 +362,7 @@ export default function Menu() {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
+                  className="snap-center"
                   style={{
                     ...T.catNav,
                     flexShrink: 0,
@@ -410,9 +389,10 @@ export default function Menu() {
             style={{ background: INK, borderBottom: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}
           >
             <div className="max-w-3xl mx-auto px-4">
-              <div className="flex overflow-x-auto scrollbar-hide">
+              <div className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth">
                 <button
                   onClick={() => setActiveCategory('all')}
+                  className="snap-center"
                   style={{
                     ...T.catNav,
                     flexShrink: 0, padding: '12px 14px',
@@ -428,6 +408,7 @@ export default function Menu() {
                   <button
                     key={cat.id}
                     onClick={() => setActiveCategory(cat.id)}
+                    className="snap-center"
                     style={{
                       ...T.catNav,
                       flexShrink: 0, padding: '12px 14px',

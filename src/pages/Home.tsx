@@ -100,7 +100,7 @@ export default function Home() {
       </Carousel>
 
       {/* ── Propuesta de valor ─────────────────────────────────── */}
-      <section style={{ background: '#FDFAF5', padding: '72px 24px' }}>
+      <section style={{ background: '#FDFAF5', padding: '96px 24px' }}>
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
@@ -120,8 +120,15 @@ export default function Home() {
                 desc: 'Disfruta el atardecer del Pacífico desde nuestra terraza sobre las rocas.',
               },
             ].map(({ Icon, title, desc }) => (
-              <div key={title} style={{ textAlign: 'center', padding: '32px 24px', background: 'white', borderRadius: '4px', border: '1px solid rgba(28,43,45,0.07)' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '18px' }}>
+              <div
+                key={title}
+                className="group transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                style={{ textAlign: 'center', padding: '32px 24px', background: 'white', borderRadius: '4px', border: '1px solid rgba(28,43,45,0.07)' }}
+              >
+                <div
+                  className="transition-transform duration-300 group-hover:scale-110"
+                  style={{ display: 'flex', justifyContent: 'center', marginBottom: '18px' }}
+                >
                   <Icon size={30} strokeWidth={1.5} style={{ color: CALIPSO }} />
                 </div>
                 <h3 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 400, fontSize: '22px', color: INK, marginBottom: '12px' }}>
@@ -182,7 +189,7 @@ export default function Home() {
       )}
 
       {/* ── Platos destacados ─────────────────────────────────── */}
-      <section style={{ background: 'white', padding: '72px 24px' }}>
+      <section style={{ background: 'white', padding: '96px 24px' }}>
         <div className="max-w-5xl mx-auto">
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <p style={{ color: CALIPSO, fontSize: '10px', letterSpacing: '0.35em', textTransform: 'uppercase', fontWeight: 400, marginBottom: '12px' }}>
@@ -238,7 +245,7 @@ export default function Home() {
       </section>
 
       {/* ── CTA Reservas ──────────────────────────────────────── */}
-      <section style={{ background: INK, padding: '72px 24px', textAlign: 'center' }}>
+      <section style={{ background: INK, padding: '96px 24px', textAlign: 'center' }}>
         <div style={{ maxWidth: '480px', margin: '0 auto' }}>
           <p style={{ color: 'rgba(255,255,255,0.50)', fontSize: '10px', letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: '16px' }}>
             ¿Listo para vivir la experiencia?
