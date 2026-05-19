@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, MapPin, Clock } from 'lucide-react'
+import { ArrowRight, MapPin, Clock, Waves, ChefHat, Sunset } from 'lucide-react'
 import Carousel from '../components/ui/Carousel'
 import { PHOTOS } from '../lib/images'
 
@@ -45,32 +45,19 @@ export default function Home() {
             Restaurant
           </p>
           <div style={{ width: '40px', height: '1.5px', background: CALIPSO, margin: '0 auto 32px' }} />
-          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '14px', maxWidth: '380px', lineHeight: 1.75, fontWeight: 300, marginBottom: '40px' }}>
+          <p style={{ color: 'rgba(255,255,255,0.70)', fontSize: '14px', maxWidth: '380px', lineHeight: 1.75, fontWeight: 300, marginBottom: '40px' }}>
             El océano en su expresión más pura. Mariscos frescos del Pacífico,
             técnica depurada y terraza frente al mar.
           </p>
+
+          {/* CTAs — reserva (primario) + carta (secundario) */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              to="/carta"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                border: '1.5px solid rgba(255,255,255,0.45)',
-                color: 'white', fontWeight: 400, padding: '12px 28px',
-                borderRadius: '4px', textDecoration: 'none',
-                fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase',
-                transition: 'all 200ms ease',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = 'white')}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.45)')}
-            >
-              Ver la Carta <ArrowRight size={13} />
-            </Link>
             <Link
               to="/reservas"
               style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 background: '#E8593C', color: 'white', fontWeight: 500,
-                padding: '12px 28px', borderRadius: '4px', textDecoration: 'none',
+                padding: '13px 30px', borderRadius: '4px', textDecoration: 'none',
                 fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase',
                 transition: 'background 200ms ease',
               }}
@@ -79,11 +66,37 @@ export default function Home() {
             >
               Reservar una mesa
             </Link>
+            <Link
+              to="/carta"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                border: '1.5px solid rgba(255,255,255,0.60)',
+                color: 'white', fontWeight: 400, padding: '13px 30px',
+                borderRadius: '4px', textDecoration: 'none',
+                fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase',
+                transition: 'all 200ms ease',
+                background: 'transparent',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = 'white'
+                e.currentTarget.style.background = 'rgba(255,255,255,0.10)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.60)'
+                e.currentTarget.style.background = 'transparent'
+              }}
+            >
+              Ver la Carta <ArrowRight size={13} />
+            </Link>
           </div>
         </div>
 
-        {/* Bottom fade to white */}
-        <div style={{ height: '80px', background: 'linear-gradient(to bottom, transparent, #FDFAF5)', flexShrink: 0 }} />
+        {/* Bottom fade — suave y gradual para no cortar la imagen */}
+        <div style={{
+          height: '140px',
+          background: 'linear-gradient(to bottom, transparent 0%, rgba(253,250,245,0.55) 60%, #FDFAF5 100%)',
+          flexShrink: 0,
+        }} />
       </Carousel>
 
       {/* ── Propuesta de valor ─────────────────────────────────── */}
@@ -91,16 +104,30 @@ export default function Home() {
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { icon: '🌊', title: 'Del Océano a tu Mesa', desc: 'Trabajamos directamente con pescadores artesanales de Caleta Higuerillas y Quintero.' },
-              { icon: '👨‍🍳', title: 'Técnica de Autor',    desc: 'Cocina chilena contemporánea con influencias nikkei y mediterráneas.' },
-              { icon: '🌅', title: 'Terraza Frente al Mar', desc: 'Disfruta el atardecer del Pacífico desde nuestra terraza sobre las rocas.' },
-            ].map(({ icon, title, desc }) => (
+              {
+                Icon: Waves,
+                title: 'Del Océano a tu Mesa',
+                desc: 'Trabajamos directamente con pescadores artesanales de Caleta Higuerillas y Quintero.',
+              },
+              {
+                Icon: ChefHat,
+                title: 'Técnica de Autor',
+                desc: 'Cocina chilena contemporánea con influencias nikkei y mediterráneas.',
+              },
+              {
+                Icon: Sunset,
+                title: 'Terraza Frente al Mar',
+                desc: 'Disfruta el atardecer del Pacífico desde nuestra terraza sobre las rocas.',
+              },
+            ].map(({ Icon, title, desc }) => (
               <div key={title} style={{ textAlign: 'center', padding: '32px 24px', background: 'white', borderRadius: '4px', border: '1px solid rgba(28,43,45,0.07)' }}>
-                <div style={{ fontSize: '44px', marginBottom: '16px' }}>{icon}</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '18px' }}>
+                  <Icon size={30} strokeWidth={1.5} style={{ color: CALIPSO }} />
+                </div>
                 <h3 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 400, fontSize: '22px', color: INK, marginBottom: '12px' }}>
                   {title}
                 </h3>
-                <p style={{ fontSize: '13px', color: 'rgba(28,43,45,0.55)', lineHeight: 1.7, fontWeight: 300 }}>
+                <p style={{ fontSize: '13px', color: 'rgba(28,43,45,0.72)', lineHeight: 1.7, fontWeight: 300 }}>
                   {desc}
                 </p>
               </div>
@@ -158,19 +185,23 @@ export default function Home() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px" style={{ border: '1px solid rgba(28,43,45,0.08)', background: 'rgba(28,43,45,0.08)' }}>
             {[
-              { name: 'Langosta a la Plancha',      desc: 'Mantequilla de ajo, papas doradas y rúcula',          price: '$42.900' },
-              { name: 'Pulpo a la Brasa',            desc: 'Hummus de garbanzos, aceite de pimentón ahumado',    price: '$12.900' },
-              { name: 'Arroz Meloso de Mariscos',    desc: 'Bisque, langostinos, almejas, azafrán y alioli negro', price: '$19.900' },
+              { name: 'Langosta a la Plancha',      desc: 'Mantequilla de ajo, papas doradas y rúcula',             price: '$42.900' },
+              { name: 'Pulpo a la Brasa',            desc: 'Hummus de garbanzos, aceite de pimentón ahumado',       price: '$12.900' },
+              { name: 'Arroz Meloso de Mariscos',    desc: 'Bisque, langostinos, almejas, azafrán y alioli negro',  price: '$19.900' },
             ].map(({ name, desc, price }) => (
               <div key={name} style={{ background: '#FDFAF5', padding: '28px 24px' }}>
-                <h3 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 400, fontSize: '20px', color: INK, marginBottom: '8px' }}>
-                  {name}
-                </h3>
-                <p style={{ fontSize: '12px', color: 'rgba(28,43,45,0.50)', lineHeight: 1.6, fontWeight: 300, marginBottom: '14px' }}>
+                {/* Nombre ··· Precio */}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '8px' }}>
+                  <h3 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 400, fontSize: '20px', color: INK, flexShrink: 0 }}>
+                    {name}
+                  </h3>
+                  <div style={{ flex: 1, borderBottom: '1px dotted rgba(28,43,45,0.25)', marginBottom: '3px', minWidth: '16px' }} />
+                  <span style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontWeight: 400, fontSize: '17px', color: CALIPSO, flexShrink: 0 }}>
+                    {price}
+                  </span>
+                </div>
+                <p style={{ fontSize: '12px', color: 'rgba(28,43,45,0.68)', lineHeight: 1.6, fontWeight: 300 }}>
                   {desc}
-                </p>
-                <p style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontWeight: 400, fontSize: '17px', color: CALIPSO }}>
-                  {price}
                 </p>
               </div>
             ))}
@@ -198,13 +229,13 @@ export default function Home() {
       {/* ── CTA Reservas ──────────────────────────────────────── */}
       <section style={{ background: INK, padding: '72px 24px', textAlign: 'center' }}>
         <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-          <p style={{ color: 'rgba(255,255,255,0.40)', fontSize: '10px', letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: '16px' }}>
+          <p style={{ color: 'rgba(255,255,255,0.50)', fontSize: '10px', letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: '16px' }}>
             ¿Listo para vivir la experiencia?
           </p>
           <h2 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 300, fontSize: '40px', color: 'white', marginBottom: '24px' }}>
             Reserva tu Mesa
           </h2>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '20px', color: 'rgba(255,255,255,0.40)', fontSize: '11px', marginBottom: '32px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '20px', color: 'rgba(255,255,255,0.55)', fontSize: '11px', marginBottom: '32px' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <MapPin size={12} /> Av. Borgoño 14900, Concón
             </span>

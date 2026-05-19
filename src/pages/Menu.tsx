@@ -24,7 +24,7 @@ const T = {
 }
 
 const INK       = '#1C2B2D'
-const INK55     = 'rgba(28,43,45,0.55)'
+const INK55     = 'rgba(28,43,45,0.68)'
 const INK08     = 'rgba(28,43,45,0.08)'
 const INK20DOT  = 'rgba(28,43,45,0.20)'
 const CALIPSO   = '#29B5D0'
@@ -368,7 +368,7 @@ export default function Menu() {
                   ...T.catNav,
                   flexShrink: 0,
                   padding: '14px 16px',
-                  color: activeCategory === 'all' ? CALIPSO : 'rgba(255,255,255,0.40)',
+                  color: activeCategory === 'all' ? CALIPSO : 'rgba(255,255,255,0.68)',
                   background: 'none',
                   border: 'none',
                   borderBottom: activeCategory === 'all' ? `2px solid ${CALIPSO}` : '2px solid transparent',
@@ -386,7 +386,7 @@ export default function Menu() {
                     ...T.catNav,
                     flexShrink: 0,
                     padding: '14px 16px',
-                    color: activeCategory === cat.id ? CALIPSO : 'rgba(255,255,255,0.40)',
+                    color: activeCategory === cat.id ? CALIPSO : 'rgba(255,255,255,0.68)',
                     background: 'none',
                     border: 'none',
                     borderBottom: activeCategory === cat.id ? `2px solid ${CALIPSO}` : '2px solid transparent',
@@ -414,7 +414,7 @@ export default function Menu() {
                   style={{
                     ...T.catNav,
                     flexShrink: 0, padding: '12px 14px',
-                    color: activeCategory === 'all' ? CALIPSO : 'rgba(255,255,255,0.40)',
+                    color: activeCategory === 'all' ? CALIPSO : 'rgba(255,255,255,0.68)',
                     background: 'none', border: 'none',
                     borderBottom: activeCategory === 'all' ? `2px solid ${CALIPSO}` : '2px solid transparent',
                     cursor: 'pointer',
@@ -429,7 +429,7 @@ export default function Menu() {
                     style={{
                       ...T.catNav,
                       flexShrink: 0, padding: '12px 14px',
-                      color: activeCategory === cat.id ? CALIPSO : 'rgba(255,255,255,0.40)',
+                      color: activeCategory === cat.id ? CALIPSO : 'rgba(255,255,255,0.68)',
                       background: 'none', border: 'none',
                       borderBottom: activeCategory === cat.id ? `2px solid ${CALIPSO}` : '2px solid transparent',
                       cursor: 'pointer',
