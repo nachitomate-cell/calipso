@@ -13,28 +13,28 @@ export const PHOTOS = {
   // ── Carrusel de inicio (3 slides, automático cada 5s) ──────────────────
   carousel: [
     {
-      src: '',          // 1. Fachada de noche con letrero iluminado — impacto inmediato
+      src: '/entrance.jpg',
       alt: 'Fachada de Calipso Restaurant de noche con letrero iluminado',
     },
     {
-      src: '',          // 2. Exterior verde turquesa sobre el mar — contexto y ubicación
+      src: '/6844937940_2bb4794abe_b.jpg',
       alt: 'Exterior de Calipso Restaurant sobre el mar en Concón',
     },
     {
-      src: '',          // 3. Interior con comensales y vista al mar — calidez y autenticidad
+      src: '/interior.jpg',
       alt: 'Interior de Calipso Restaurant con vista panorámica al mar',
     },
   ],
 
   // ── Header de la carta digital ─────────────────────────────────────────
-  menuHero: '',         // Interior con ventanales panorámicos y vista al mar (día)
+  menuHero: '/calypso.jpg',
 
   // ── Página de reservas (split layout desktop) ──────────────────────────
-  reservations: '',     // Interior con mesa preparada y vista panorámica al fondo
+  reservations: '/20180425-153019-largejpg.jpg',
 
   // ── Sección "Sobre el restaurante" (Home) ─────────────────────────────
-  aboutLarge: '',       // Interior con comensales — 70% del grid
-  aboutSmall: '',       // Detalle artístico — 30% del grid (ej: gaviota sobre el mar)
+  aboutLarge: '/calipso-dest-1.jpg',
+  aboutSmall: '/caption.jpg',
 }
 
 /**
