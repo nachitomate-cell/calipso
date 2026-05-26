@@ -16,6 +16,7 @@ import Orders from './pages/admin/Orders'
 import Kitchen from './pages/admin/Kitchen'
 import Reports from './pages/admin/Reports'
 import Notifications from './pages/admin/Notifications'
+import Chat from './pages/admin/Chat'
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -38,6 +39,7 @@ function AdminRoutes() {
       <Route path="comandas" element={<Orders />} />
       <Route path="reportes" element={<Reports />} />
       <Route path="notificaciones" element={<Notifications />} />
+      <Route path="chat" element={<Chat />} />
     </Routes>
   )
 }

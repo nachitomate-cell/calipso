@@ -4,11 +4,11 @@ import { supabase } from '../../lib/supabase'
 import {
   LayoutDashboard, UtensilsCrossed, Table2, CalendarDays,
   Package, LogOut, Menu, X, ChevronRight,
-  ClipboardList, ChefHat, BarChart2, Bell,
+  ClipboardList, ChefHat, BarChart2, Bell, MessageCircle,
 } from 'lucide-react'
 import Logo from '../ui/Logo'
 import clsx from 'clsx'
-import { getReservations, getInventory, computeNotifications } from '../../lib/api'
+import { getReservations, getInventory, computeNotifications, getTotalUnreadChat } from '../../lib/api'
 
 const navGroups = [
   {
@@ -18,6 +18,7 @@ const navGroups = [
       { to: '/admin/comandas',  label: 'Comandas',    icon: ClipboardList },
       { to: '/admin/reservas',  label: 'Reservas',    icon: CalendarDays },
       { to: '/admin/mesas',     label: 'Mesas',       icon: Table2 },
+      { to: '/admin/chat',      label: 'Chat',        icon: MessageCircle },
     ],
   },
   {
@@ -42,6 +43,7 @@ const navItems = navGroups.flatMap(g => g.items)
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [chatUnread, setChatUnread] = useState(0)
   const { pathname } = useLocation()
   const navigate = useNavigate()
 
@@ -52,20 +54,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const activeItem = navItems.find(n => (n.exact ? pathname === n.to : pathname.startsWith(n.to)))
 
-  // Load unread notification count
+  // Load unread notification count + chat unread
   useEffect(() => {
     const load = async () => {
       try {
-        const [resos, inv] = await Promise.all([getReservations(), getInventory()])
+        const [resos, inv, chatCount] = await Promise.all([
+          getReservations(), getInventory(), getTotalUnreadChat(),
+        ])
         const notifs = computeNotifications(resos, inv)
         try {
           const readIds = new Set(JSON.parse(localStorage.getItem('calipso_notif_read') ?? '[]') as string[])
           setUnreadCount(notifs.filter(n => !readIds.has(n.id)).length)
         } catch { setUnreadCount(notifs.length) }
+        setChatUnread(chatCount)
       } catch { /* silent */ }
     }
     load()
-    const interval = setInterval(load, 60000)
+    const interval = setInterval(load, 30000)
     return () => clearInterval(interval)
   }, [pathname])
 
@@ -94,6 +99,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {group.items.map(({ to, label, icon: Icon, exact }) => {
                   const active = exact ? pathname === to : pathname.startsWith(to)
                   const isNotif = to === '/admin/notificaciones'
+                  const isChat = to === '/admin/chat'
+                  const badge = isNotif ? unreadCount : isChat ? chatUnread : 0
                   return (
                     <Link
                       key={to}
@@ -108,12 +115,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     >
                       <Icon size={16} />
                       <span className="flex-1">{label}</span>
-                      {isNotif && unreadCount > 0 && (
+                      {badge > 0 && (
                         <span className="bg-coral text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                          {unreadCount}
+                          {badge}
                         </span>
                       )}
-                      {active && !isNotif && <ChevronRight size={12} className="opacity-70" />}
+                      {active && badge === 0 && <ChevronRight size={12} className="opacity-70" />}
                     </Link>
                   )
                 })}
@@ -166,9 +173,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {/* Notification bell */}
           <Link to="/admin/notificaciones" className="relative p-1.5 text-ink-secondary hover:text-calipso transition-colors">
             <Bell size={19} />
-            {unreadCount > 0 && (
+            {(unreadCount + chatUnread) > 0 && (
               <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-coral text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                {unreadCount > 9 ? '9+' : unreadCount}
+                {(unreadCount + chatUnread) > 9 ? '9+' : unreadCount + chatUnread}
               </span>
             )}
           </Link>

@@ -2,8 +2,9 @@ import { supabase } from './supabase'
 import {
   mockCategories, mockMenuItems, mockTables, mockReservations,
   mockInventory, mockOrders, mockOrderItems, mockHistoricalOrders,
+  mockChatSessions, mockChatMessages,
 } from './mock-data'
-import type { Category, MenuItem, Table, Reservation, InventoryItem, Order, OrderItem, AppNotification } from '../types'
+import type { Category, MenuItem, Table, Reservation, InventoryItem, Order, OrderItem, AppNotification, ChatSession, ChatMessage } from '../types'
 
 const USE_MOCK = !import.meta.env.VITE_SUPABASE_URL
 
@@ -407,4 +408,122 @@ export async function upsertInventoryItem(
     .single()
   if (error) throw error
   return data as InventoryItem
+}
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+
+export async function getChatSessions(): Promise<ChatSession[]> {
+  if (USE_MOCK) {
+    return [...mockChatSessions]
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+  }
+  const { data, error } = await supabase
+    .from('chat_sessions')
+    .select('*')
+    .order('updated_at', { ascending: false })
+  if (error) throw error
+  return data as ChatSession[]
+}
+
+export async function getChatSession(id: string): Promise<ChatSession | null> {
+  if (USE_MOCK) {
+    const session = mockChatSessions.find(s => s.id === id)
+    if (!session) return null
+    return {
+      ...session,
+      messages: mockChatMessages
+        .filter(m => m.session_id === id)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
+    }
+  }
+  const { data, error } = await supabase
+    .from('chat_sessions')
+    .select('*, messages:chat_messages(*)')
+    .eq('id', id)
+    .single()
+  if (error) throw error
+  return data as ChatSession
+}
+
+export async function createChatSession(
+  guestName: string, guestPhone: string, guestEmail?: string
+): Promise<ChatSession> {
+  if (USE_MOCK) {
+    const session: ChatSession = {
+      id: `cs-${Date.now()}`,
+      guest_name: guestName,
+      guest_phone: guestPhone,
+      guest_email: guestEmail ?? null,
+      status: 'open',
+      unread_admin: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    mockChatSessions.push(session)
+    return session
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('chat_sessions') as any)
+    .insert({ guest_name: guestName, guest_phone: guestPhone, guest_email: guestEmail ?? null, status: 'open', unread_admin: 0 })
+    .select().single()
+  if (error) throw error
+  return data as ChatSession
+}
+
+export async function sendChatMessage(
+  sessionId: string, text: string, sender: ChatMessage['sender']
+): Promise<ChatMessage> {
+  if (USE_MOCK) {
+    const msg: ChatMessage = {
+      id: `cm-${Date.now()}`,
+      session_id: sessionId,
+      sender,
+      text,
+      created_at: new Date().toISOString(),
+    }
+    mockChatMessages.push(msg)
+    // Update session
+    const session = mockChatSessions.find(s => s.id === sessionId)
+    if (session) {
+      session.updated_at = new Date().toISOString()
+      if (sender === 'guest') session.unread_admin += 1
+    }
+    return msg
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('chat_messages') as any)
+    .insert({ session_id: sessionId, text, sender })
+    .select().single()
+  if (error) throw error
+  return data as ChatMessage
+}
+
+export async function markChatSessionRead(sessionId: string): Promise<void> {
+  if (USE_MOCK) {
+    const session = mockChatSessions.find(s => s.id === sessionId)
+    if (session) session.unread_admin = 0
+    return
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase.from('chat_sessions') as any).update({ unread_admin: 0 }).eq('id', sessionId)
+}
+
+export async function resolveChatSession(sessionId: string): Promise<void> {
+  if (USE_MOCK) {
+    const session = mockChatSessions.find(s => s.id === sessionId)
+    if (session) { session.status = 'resolved'; session.unread_admin = 0 }
+    return
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase.from('chat_sessions') as any).update({ status: 'resolved', unread_admin: 0 }).eq('id', sessionId)
+}
+
+export async function getTotalUnreadChat(): Promise<number> {
+  if (USE_MOCK) {
+    return mockChatSessions.reduce((s, c) => s + c.unread_admin, 0)
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = await (supabase.from('chat_sessions') as any).select('unread_admin').eq('status', 'open')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data ?? []).reduce((s: number, c: any) => s + (c.unread_admin ?? 0), 0)
 }

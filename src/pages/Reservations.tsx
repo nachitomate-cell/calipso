@@ -3,6 +3,7 @@ import { createReservation } from '../lib/api'
 import { Input, TextArea, Select } from '../components/ui/Input'
 import { CheckCircle, AlertCircle, Users, Calendar, Clock } from 'lucide-react'
 import { PHOTOS } from '../lib/images'
+import ChatWidget from '../components/ui/ChatWidget'
 
 const INK = '#1C2B2D'
 const CALIPSO = '#29B5D0'
@@ -73,6 +74,7 @@ export default function Reservations() {
   const showPhoto = PHOTOS.reservations && !photoErrored
 
   return (
+    <>
     <div style={{ minHeight: '100vh', fontFamily: 'Jost, system-ui, sans-serif', paddingTop: '68px' }}>
 
       {/* Mobile photo banner (collapses above the form) */}
@@ -241,5 +243,9 @@ export default function Reservations() {
         </div>
       </div>
     </div>
+
+    {/* Floating chat widget */}
+    <ChatWidget />
+    </>
   )
 }

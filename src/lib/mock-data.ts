@@ -1,4 +1,4 @@
-import type { Category, MenuItem, Table, Reservation, InventoryItem, Order, OrderItem } from '../types'
+import type { Category, MenuItem, Table, Reservation, InventoryItem, Order, OrderItem, ChatSession, ChatMessage } from '../types'
 
 // Helper: date offset from today
 function daysFromNow(n: number): string {
@@ -345,3 +345,42 @@ function buildHistoricalOrders(): Order[] {
 }
 
 export const mockHistoricalOrders: Order[] = buildHistoricalOrders()
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+
+export const mockChatMessages: ChatMessage[] = [
+  // Session 1 — Ana pregunta por menú vegetariano
+  { id: 'cm-1',  session_id: 'cs-1', sender: 'guest', text: 'Hola, ¿tienen opciones vegetarianas en el menú?', created_at: new Date(Date.now() - 7200000).toISOString() },
+  { id: 'cm-2',  session_id: 'cs-1', sender: 'bot',   text: 'Contamos con entradas y postres vegetarianos. Para dietas especiales o alergias, indícalo en las notas al reservar y el chef lo tendrá en cuenta.', created_at: new Date(Date.now() - 7199000).toISOString() },
+  { id: 'cm-3',  session_id: 'cs-1', sender: 'guest', text: 'Perfecto. ¿Y para niños tienen algo especial?', created_at: new Date(Date.now() - 5400000).toISOString() },
+  { id: 'cm-4',  session_id: 'cs-1', sender: 'guest', text: 'Somos 2 adultos y 2 niños de 6 y 9 años', created_at: new Date(Date.now() - 5390000).toISOString() },
+  // Session 2 — Juan pregunta por estacionamiento (resuelta)
+  { id: 'cm-5',  session_id: 'cs-2', sender: 'guest', text: '¿Tienen estacionamiento?', created_at: new Date(Date.now() - 18000000).toISOString() },
+  { id: 'cm-6',  session_id: 'cs-2', sender: 'bot',   text: 'No contamos con estacionamiento propio, pero hay estacionamiento público en Av. Borgoño a 200 metros del restaurante.', created_at: new Date(Date.now() - 17999000).toISOString() },
+  { id: 'cm-7',  session_id: 'cs-2', sender: 'admin', text: 'Hola Juan, también hay espacios libres frente al restaurante en temporada baja. ¡Te esperamos!', created_at: new Date(Date.now() - 14400000).toISOString() },
+  // Session 3 — Carlos pregunta por cumpleaños
+  { id: 'cm-8',  session_id: 'cs-3', sender: 'guest', text: 'Hola, quiero celebrar el cumpleaños de mi esposa, ¿puedo llevar una torta?', created_at: new Date(Date.now() - 1800000).toISOString() },
+  { id: 'cm-9',  session_id: 'cs-3', sender: 'bot',   text: '¡Con gusto! Solo avísanos al reservar para coordinar el servicio de corte y presentación. ¿Quieres que te ayudemos a planificar algo especial?', created_at: new Date(Date.now() - 1799000).toISOString() },
+  { id: 'cm-10', session_id: 'cs-3', sender: 'guest', text: 'Sí por favor, también queremos decoración en la mesa si es posible', created_at: new Date(Date.now() - 900000).toISOString() },
+]
+
+export const mockChatSessions: ChatSession[] = [
+  {
+    id: 'cs-1', guest_name: 'Ana Torres', guest_phone: '+56 9 8812 3456', guest_email: 'ana@mail.com',
+    status: 'open', unread_admin: 2,
+    created_at: new Date(Date.now() - 7200000).toISOString(),
+    updated_at: new Date(Date.now() - 5390000).toISOString(),
+  },
+  {
+    id: 'cs-2', guest_name: 'Juan Pérez', guest_phone: '+56 9 7723 4567', guest_email: null,
+    status: 'resolved', unread_admin: 0,
+    created_at: new Date(Date.now() - 18000000).toISOString(),
+    updated_at: new Date(Date.now() - 14400000).toISOString(),
+  },
+  {
+    id: 'cs-3', guest_name: 'Carlos Silva', guest_phone: '+56 9 6634 5678', guest_email: null,
+    status: 'open', unread_admin: 1,
+    created_at: new Date(Date.now() - 1800000).toISOString(),
+    updated_at: new Date(Date.now() - 900000).toISOString(),
+  },
+]

@@ -86,6 +86,26 @@ export interface Order {
   items?: OrderItem[]
 }
 
+export interface ChatMessage {
+  id: string
+  session_id: string
+  sender: 'guest' | 'admin' | 'bot'
+  text: string
+  created_at: string
+}
+
+export interface ChatSession {
+  id: string
+  guest_name: string | null
+  guest_phone: string | null
+  guest_email: string | null
+  status: 'open' | 'resolved'
+  unread_admin: number   // messages not yet read by admin
+  created_at: string
+  updated_at: string
+  messages?: ChatMessage[]
+}
+
 export interface AppNotification {
   id: string
   type: 'reservation_new' | 'reservation_pending' | 'stock_low' | 'stock_out' | 'order_ready'
