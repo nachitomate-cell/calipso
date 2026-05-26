@@ -11,112 +11,142 @@ function formatPrice(price: number) {
   return `$${price.toLocaleString('es-CL')}`
 }
 
-// ── Type tokens ──────────────────────────────────────────────────────────────
+// ── Design tokens ─────────────────────────────────────────────────────────────
 
-const T = {
-  heading:     { fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 300 } as React.CSSProperties,
-  dishName:    { fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 400, fontSize: '18px' } as React.CSSProperties,
-  price:       { fontFamily: '"Cormorant Garamond", Georgia, serif', fontWeight: 400, fontSize: '17px' } as React.CSSProperties,
-  label:       { fontFamily: 'Jost, system-ui, sans-serif', fontWeight: 400, letterSpacing: '0.25em', textTransform: 'uppercase' as const },
-  desc:        { fontFamily: 'Jost, system-ui, sans-serif', fontWeight: 300, fontSize: '11.5px', lineHeight: 1.65 } as React.CSSProperties,
-  ui:          { fontFamily: 'Jost, system-ui, sans-serif', fontWeight: 400 } as React.CSSProperties,
-  catNav:      { fontFamily: 'Jost, system-ui, sans-serif', fontWeight: 400, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase' as const },
+const INK     = '#1C2B2D'
+const INK60   = 'rgba(28,43,45,0.62)'
+const INK10   = 'rgba(28,43,45,0.10)'
+const CALIPSO = '#29B5D0'
+const PAPER   = '#FDFAF5'
+
+const serif  = '"Cormorant Garamond", Georgia, serif'
+const sans   = 'Jost, system-ui, sans-serif'
+
+// ── Allergen badge ────────────────────────────────────────────────────────────
+
+const allergenLabels: Record<string, string> = {
+  gluten:     'Gluten',
+  lacteos:    'Lácteos',
+  moluscos:   'Moluscos',
+  crustaceos: 'Crustáceos',
+  pescado:    'Pescado',
+  nueces:     'Frutos secos',
+  huevos:     'Huevos',
+  soja:       'Soja',
 }
 
-const INK       = '#1C2B2D'
-const INK55     = 'rgba(28,43,45,0.68)'
-const INK08     = 'rgba(28,43,45,0.08)'
-const INK20DOT  = 'rgba(28,43,45,0.20)'
-const CALIPSO   = '#29B5D0'
-const PAPER     = '#FDFAF5'
-const HOVER_BG  = '#F7F2E8'
-
-// ── Allergen badge component ──────────────────────────────────────────────────
-
-const allergenConfig: Record<string, { label: string; bg: string; color: string }> = {
-  gluten:     { label: 'Contiene gluten',  bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
-  lacteos:    { label: 'Contiene lácteos', bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
-  moluscos:   { label: 'Moluscos',         bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
-  crustaceos: { label: 'Crustáceos',       bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
-  pescado:    { label: 'Pescado',          bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
-  nueces:     { label: 'Frutos secos',     bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
-  huevos:     { label: 'Huevos',           bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
-  soja:       { label: 'Soja',             bg: 'rgba(186,117,23,0.12)',  color: '#854F0B' },
-}
-
-function AllergenBadge({ allergen, variant = 'light' }: { allergen: string; variant?: 'light' | 'dark' }) {
-  const cfg = allergenConfig[allergen]
-  if (!cfg) return null
-  const cls = variant === 'dark'
-    ? 'bg-white/10 text-white/55 border-white/20'
-    : 'bg-amber-50 text-amber-700 border-amber-200'
+function AllergenBadge({ allergen, dark }: { allergen: string; dark?: boolean }) {
+  const label = allergenLabels[allergen]
+  if (!label) return null
   return (
-    <span className={`inline-flex items-center text-[10px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${cls}`}>
-      {cfg.label}
+    <span
+      style={{
+        fontFamily: sans,
+        fontSize: '11px',
+        fontWeight: 500,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase' as const,
+        padding: '3px 10px',
+        borderRadius: '99px',
+        border: dark ? '1px solid rgba(255,255,255,0.18)' : `1px solid rgba(186,117,23,0.30)`,
+        background: dark ? 'rgba(255,255,255,0.07)' : 'rgba(186,117,23,0.09)',
+        color: dark ? 'rgba(255,255,255,0.55)' : '#854F0B',
+        whiteSpace: 'nowrap' as const,
+      }}
+    >
+      {label}
     </span>
   )
 }
 
-// ── Featured "Plato del día" — full-width dark card ──────────────────────────
+// ── Featured card ─────────────────────────────────────────────────────────────
 
 function FeaturedCard({ item }: { item: MenuItem }) {
   return (
     <div
-      className="col-span-full"
       style={{
         background: INK,
-        padding: '24px 28px',
-        borderTop: `1px solid ${INK08}`,
-        borderBottom: `1px solid ${INK08}`,
+        padding: '28px 32px',
+        borderBottom: `1px solid ${INK10}`,
       }}
     >
-      {/* Label */}
-      <p style={{ ...T.label, fontSize: '9px', letterSpacing: '0.25em', color: CALIPSO, marginBottom: '12px' }}>
+      <p style={{
+        fontFamily: sans,
+        fontSize: '10px',
+        letterSpacing: '0.30em',
+        textTransform: 'uppercase',
+        color: CALIPSO,
+        marginBottom: '16px',
+      }}>
         — Plato del día —
       </p>
 
-      {/* Image if present */}
       {item.image_url && (
         <img
           src={item.image_url}
           alt={item.name}
-          style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 0, display: 'block', marginBottom: '16px' }}
+          style={{
+            width: '100%',
+            aspectRatio: '16/9',
+            objectFit: 'cover',
+            display: 'block',
+            marginBottom: '20px',
+            borderRadius: '2px',
+          }}
         />
       )}
 
-      {/* Name + price row */}
-      <div className="flex items-baseline gap-3" style={{ minWidth: 0 }}>
-        <span style={{ ...T.dishName, fontSize: '22px', color: 'white', fontWeight: 300, flexShrink: 1, minWidth: 0, maxWidth: '65%' }}>
+      {/* Name + price */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', minWidth: 0, flexWrap: 'wrap' }}>
+        <span style={{
+          fontFamily: serif,
+          fontStyle: 'italic',
+          fontWeight: 300,
+          fontSize: '28px',
+          color: 'white',
+          lineHeight: 1.15,
+          flex: '1 1 auto',
+          minWidth: 0,
+        }}>
           {item.name}
         </span>
-        <div className="flex-1" style={{ borderBottom: `1px dotted rgba(255,255,255,0.15)`, marginBottom: '4px', flexShrink: 0, minWidth: '20px' }} />
-        <span style={{ ...T.price, fontSize: '19px', color: CALIPSO, flexShrink: 0, whiteSpace: 'nowrap' }}>
+        <span style={{
+          fontFamily: serif,
+          fontWeight: 400,
+          fontSize: '24px',
+          color: CALIPSO,
+          flexShrink: 0,
+          whiteSpace: 'nowrap',
+        }}>
           {formatPrice(item.price)}
         </span>
       </div>
 
-      {/* Description */}
       {item.description && (
-        <p style={{ ...T.desc, color: 'rgba(255,255,255,0.5)', marginTop: '8px' }}>
+        <p style={{
+          fontFamily: sans,
+          fontWeight: 300,
+          fontSize: '14px',
+          lineHeight: 1.75,
+          color: 'rgba(255,255,255,0.55)',
+          marginTop: '10px',
+        }}>
           {item.description}
         </p>
       )}
 
-      {/* Allergens */}
       {item.allergens.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {item.allergens.map(a => (
-            <AllergenBadge key={a} allergen={a} variant="dark" />
-          ))}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '14px' }}>
+          {item.allergens.map(a => <AllergenBadge key={a} allergen={a} dark />)}
         </div>
       )}
     </div>
   )
 }
 
-// ── Standard dish row — print-style ─────────────────────────────────────────
+// ── Standard dish row ─────────────────────────────────────────────────────────
 
-function DishRow({ item, isLast }: { item: MenuItem; isLast: boolean }) {
+function DishRow({ item }: { item: MenuItem }) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -124,51 +154,94 @@ function DishRow({ item, isLast }: { item: MenuItem; isLast: boolean }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        padding: '16px 20px',
-        borderBottom: isLast ? 'none' : `1px solid ${INK08}`,
-        background: !item.is_available ? PAPER : hovered ? HOVER_BG : PAPER,
-        opacity: item.is_available ? 1 : 0.45,
-        transition: 'all 250ms ease',
-        boxShadow: hovered && item.is_available ? 'inset 2px 0 0 #29B5D0' : 'inset 2px 0 0 transparent',
+        padding: '22px 32px',
+        borderBottom: `1px solid ${INK10}`,
+        background: hovered && item.is_available ? '#F5F0E6' : PAPER,
+        opacity: item.is_available ? 1 : 0.42,
+        transition: 'background 200ms ease, box-shadow 200ms ease',
+        boxShadow: hovered && item.is_available ? `inset 3px 0 0 ${CALIPSO}` : 'inset 3px 0 0 transparent',
       }}
     >
-      {/* Image (optional) */}
       {item.image_url && (
         <img
           src={item.image_url}
           alt={item.name}
-          style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 0, display: 'block', marginBottom: '12px' }}
+          style={{
+            width: '100%',
+            aspectRatio: '16/9',
+            objectFit: 'cover',
+            display: 'block',
+            borderRadius: '2px',
+            marginBottom: '16px',
+          }}
         />
       )}
 
-      {/* Name ··· Price row */}
-      <div className="flex items-baseline gap-2" style={{ minWidth: 0 }}>
-        {/* min-w-0 permite que flex items se encojan por debajo de su contenido natural */}
-        <span style={{ ...T.dishName, color: INK, flexShrink: 1, minWidth: 0, maxWidth: '62%' }}>
+      {/* Name + dotted leader + price */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', minWidth: 0 }}>
+        <span style={{
+          fontFamily: serif,
+          fontStyle: 'italic',
+          fontWeight: 400,
+          fontSize: 'clamp(22px, 4vw, 27px)',
+          color: INK,
+          lineHeight: 1.2,
+          flex: '1 1 auto',
+          minWidth: 0,
+        }}>
           {item.name}
         </span>
+
         {/* Dotted leader */}
-        <div
-          className="flex-1"
-          style={{ borderBottom: `1px dotted ${INK20DOT}`, minWidth: '20px', marginBottom: '3px', flexShrink: 0 }}
-        />
-        <span style={{ ...T.price, color: INK, flexShrink: 0, whiteSpace: 'nowrap' }}>
+        <div style={{
+          flexShrink: 0,
+          flexGrow: 1,
+          minWidth: '24px',
+          maxWidth: '80px',
+          borderBottom: `1.5px dotted rgba(28,43,45,0.18)`,
+          marginBottom: '5px',
+        }} />
+
+        <span style={{
+          fontFamily: serif,
+          fontWeight: 400,
+          fontSize: 'clamp(20px, 3.5vw, 24px)',
+          color: CALIPSO,
+          flexShrink: 0,
+          whiteSpace: 'nowrap',
+        }}>
           {formatPrice(item.price)}
         </span>
       </div>
 
-      {/* Description */}
       {item.description && (
-        <p style={{ ...T.desc, color: INK55, marginTop: '5px' }}>
+        <p style={{
+          fontFamily: sans,
+          fontWeight: 300,
+          fontSize: '14px',
+          lineHeight: 1.75,
+          color: INK60,
+          marginTop: '6px',
+        }}>
           {item.description}
         </p>
       )}
 
-      {/* Tags row */}
       {(item.allergens.length > 0 || !item.is_available) && (
-        <div className="flex flex-wrap gap-1.5 mt-3">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginTop: '12px' }}>
           {!item.is_available && (
-            <span className="inline-flex items-center text-[10px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded-full border bg-coral-light text-coral-dark border-coral/20">
+            <span style={{
+              fontFamily: sans,
+              fontSize: '11px',
+              fontWeight: 500,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              padding: '3px 10px',
+              borderRadius: '99px',
+              border: '1px solid rgba(232,89,60,0.25)',
+              background: 'rgba(232,89,60,0.08)',
+              color: '#993C1D',
+            }}>
               Sin stock
             </span>
           )}
@@ -179,32 +252,74 @@ function DishRow({ item, isLast }: { item: MenuItem; isLast: boolean }) {
   )
 }
 
-// ── Section ornament ──────────────────────────────────────────────────────────
+// ── Section header ────────────────────────────────────────────────────────────
 
-function Ornament() {
+function SectionHeader({ category }: { category: Category }) {
   return (
-    <div className="text-center py-8">
-      <span style={{ color: CALIPSO, opacity: 0.4, letterSpacing: '8px', fontSize: '14px' }}>· · ·</span>
+    <div
+      style={{
+        textAlign: 'center',
+        padding: '48px 32px 28px',
+        borderBottom: `1px solid ${INK10}`,
+        background: PAPER,
+      }}
+    >
+      {/* Category icon / emoji */}
+      {category.icon && (
+        <div style={{
+          fontSize: '38px',
+          lineHeight: 1,
+          marginBottom: '14px',
+          filter: 'grayscale(0.15)',
+        }}>
+          {category.icon}
+        </div>
+      )}
+
+      {/* Category name */}
+      <h2 style={{
+        fontFamily: serif,
+        fontStyle: 'italic',
+        fontWeight: 300,
+        fontSize: 'clamp(34px, 6vw, 46px)',
+        color: INK,
+        lineHeight: 1.1,
+        marginBottom: category.description ? '10px' : 0,
+      }}>
+        {category.name}
+      </h2>
+
+      {/* Decorative bar */}
+      <div style={{
+        width: '36px',
+        height: '2px',
+        background: CALIPSO,
+        margin: `${category.description ? '12px' : '14px'} auto ${category.description ? '12px' : '0'}`,
+      }} />
+
+      {category.description && (
+        <p style={{
+          fontFamily: sans,
+          fontWeight: 300,
+          fontSize: '13.5px',
+          lineHeight: 1.7,
+          color: INK60,
+          maxWidth: '480px',
+          margin: '0 auto',
+        }}>
+          {category.description}
+        </p>
+      )}
     </div>
   )
 }
 
-// ── Section divider ───────────────────────────────────────────────────────────
+// ── Ornament between sections ─────────────────────────────────────────────────
 
-function SectionDivider({ name }: { name: string }) {
+function Ornament() {
   return (
-    <div className="flex items-center gap-4 px-5 py-2">
-      <div className="flex-1" style={{ borderBottom: `1px solid ${INK08}` }} />
-      <span style={{
-        ...T.label,
-        fontSize: '10px',
-        letterSpacing: '0.35em',
-        color: INK,
-        opacity: 0.4,
-      }}>
-        {name}
-      </span>
-      <div className="flex-1" style={{ borderBottom: `1px solid ${INK08}` }} />
+    <div style={{ textAlign: 'center', padding: '40px 0', background: PAPER }}>
+      <span style={{ color: CALIPSO, opacity: 0.45, letterSpacing: '10px', fontSize: '13px' }}>· · ·</span>
     </div>
   )
 }
@@ -213,13 +328,13 @@ function SectionDivider({ name }: { name: string }) {
 
 export default function Menu() {
   const [categories, setCategories] = useState<Category[]>([])
-  const [items, setItems] = useState<MenuItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [items, setItems]           = useState<MenuItem[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState<string | null>(null)
   const [activeCategory, setActiveCategory] = useState<string>('all')
-  const [lang, setLang] = useState<'es' | 'en'>('es')
-  const navRef = useRef<HTMLDivElement>(null)
-  const [navSticky, setNavSticky] = useState(false)
+  const [lang, setLang]             = useState<'es' | 'en'>('es')
+  const navRef  = useRef<HTMLDivElement>(null)
+  const [navSticky, setNavSticky]   = useState(false)
 
   useEffect(() => {
     Promise.all([getCategories(), getMenuItems()])
@@ -238,25 +353,31 @@ export default function Menu() {
   }, [])
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: PAPER, paddingTop: '68px' }}>
-      <div className="text-center space-y-4">
+    <div style={{ minHeight: '100vh', background: PAPER, paddingTop: '68px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center' }}>
         <LoadingSpinner size="md" />
-        <p style={{ ...T.label, fontSize: '10px', letterSpacing: '0.25em', color: INK55 }}>Cargando la carta…</p>
+        <p style={{ fontFamily: sans, fontSize: '11px', letterSpacing: '0.22em', textTransform: 'uppercase', color: INK60, marginTop: '16px' }}>
+          Cargando la carta…
+        </p>
       </div>
     </div>
   )
 
   if (error) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: PAPER, paddingTop: '68px' }}>
-      <div className="text-center p-8 space-y-3">
-        <AlertCircle size={36} style={{ color: '#993C1D', margin: '0 auto' }} />
-        <p style={{ ...T.heading, fontSize: '22px', color: INK }}>No pudimos cargar la carta</p>
-        <p style={{ ...T.desc, color: INK55 }}>{error}</p>
+    <div style={{ minHeight: '100vh', background: PAPER, paddingTop: '68px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center', padding: '32px' }}>
+        <AlertCircle size={38} style={{ color: '#993C1D', margin: '0 auto 16px' }} />
+        <p style={{ fontFamily: serif, fontStyle: 'italic', fontWeight: 300, fontSize: '24px', color: INK, marginBottom: '8px' }}>
+          No pudimos cargar la carta
+        </p>
+        <p style={{ fontFamily: sans, fontSize: '14px', color: INK60 }}>{error}</p>
       </div>
     </div>
   )
 
-  const filtered = activeCategory === 'all' ? items : items.filter(i => i.category_id === activeCategory)
+  const filtered = activeCategory === 'all'
+    ? items
+    : items.filter(i => i.category_id === activeCategory)
 
   const sections = categories
     .filter(c => activeCategory === 'all' || c.id === activeCategory)
@@ -267,12 +388,44 @@ export default function Menu() {
     }))
     .filter(s => s.featured.length + s.standard.length > 0)
 
+  // Shared nav pills renderer
+  const NavPills = ({ compact }: { compact?: boolean }) => (
+    <div style={{ display: 'flex', overflowX: 'auto', gap: 0, scrollbarWidth: 'none' }}>
+      {[{ id: 'all', name: lang === 'en' ? 'All' : 'Todo', icon: null }, ...categories].map(cat => {
+        const active = activeCategory === cat.id
+        return (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+            style={{
+              flexShrink: 0,
+              padding: compact ? '11px 16px' : '14px 18px',
+              fontFamily: sans,
+              fontSize: '12px',
+              fontWeight: active ? 600 : 400,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: active ? CALIPSO : 'rgba(255,255,255,0.65)',
+              background: 'none',
+              border: 'none',
+              borderBottom: active ? `2.5px solid ${CALIPSO}` : '2.5px solid transparent',
+              cursor: 'pointer',
+              transition: 'all 150ms ease',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {'icon' in cat && cat.icon ? `${cat.icon} ` : ''}{cat.name}
+          </button>
+        )
+      })}
+    </div>
+  )
+
   return (
     <div style={{ background: PAPER, minHeight: '100vh' }}>
 
-      {/* ── Dark header section ─────────────────────────────── */}
+      {/* ── Hero header ──────────────────────────────────────── */}
       <div style={{ position: 'relative', background: INK, paddingTop: '68px', overflow: 'hidden' }}>
-        {/* Background photo with overlay */}
         {PHOTOS.menuHero && (
           <>
             <img
@@ -280,39 +433,32 @@ export default function Menu() {
               alt=""
               aria-hidden="true"
               onError={e => { e.currentTarget.style.display = 'none' }}
-              style={{
-                position: 'absolute', inset: 0,
-                width: '100%', height: '100%',
-                objectFit: 'cover', objectPosition: 'center',
-              }}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
             />
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(to bottom, rgba(28,43,45,0.55), rgba(28,43,45,0.75))',
-            }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(28,43,45,0.58), rgba(28,43,45,0.80))' }} />
           </>
         )}
 
-        <div className="max-w-3xl mx-auto px-6 pt-12 pb-0 text-center relative" style={{ zIndex: 1 }}>
+        <div style={{ maxWidth: '720px', margin: '0 auto', padding: '52px 24px 0', textAlign: 'center', position: 'relative', zIndex: 1 }}>
 
-          {/* Language toggle — top right */}
-          <div className="absolute top-14 right-6 flex gap-1">
+          {/* Language toggle */}
+          <div style={{ position: 'absolute', top: '56px', right: '24px', display: 'flex', gap: '4px' }}>
             {(['es', 'en'] as const).map(l => (
               <button
                 key={l}
                 onClick={() => setLang(l)}
                 style={{
-                  ...T.ui,
-                  fontSize: '10px',
-                  letterSpacing: '0.15em',
+                  fontFamily: sans,
+                  fontSize: '11px',
+                  letterSpacing: '0.12em',
                   textTransform: 'uppercase',
-                  padding: '4px 9px',
-                  borderRadius: '2px',
-                  border: lang === l ? 'none' : `1px solid rgba(28,43,45,0.15)`,
-                  background: lang === l ? 'rgba(255,255,255,0.12)' : 'transparent',
-                  color: lang === l ? 'white' : 'rgba(255,255,255,0.35)',
+                  padding: '4px 10px',
+                  borderRadius: '3px',
+                  border: lang === l ? 'none' : '1px solid rgba(255,255,255,0.18)',
+                  background: lang === l ? 'rgba(255,255,255,0.14)' : 'transparent',
+                  color: lang === l ? 'white' : 'rgba(255,255,255,0.38)',
                   cursor: 'pointer',
-                  transition: 'all 150ms ease',
+                  transition: 'all 150ms',
                 }}
               >
                 {l}
@@ -320,182 +466,140 @@ export default function Menu() {
             ))}
           </div>
 
-          {/* Logo wordmark */}
-          <p style={{ ...T.heading, fontSize: '42px', color: 'white', lineHeight: 1.1, marginBottom: '4px' }}>
+          {/* Wordmark — large */}
+          <p style={{
+            fontFamily: serif,
+            fontStyle: 'italic',
+            fontWeight: 300,
+            fontSize: 'clamp(54px, 10vw, 72px)',
+            color: 'white',
+            lineHeight: 1,
+            marginBottom: '6px',
+            letterSpacing: '-0.01em',
+          }}>
             Calipso
           </p>
-          <p style={{ ...T.label, fontSize: '10px', letterSpacing: '0.35em', color: CALIPSO }}>
-            RESTAURANT
+          <p style={{
+            fontFamily: sans,
+            fontWeight: 400,
+            fontSize: '12px',
+            letterSpacing: '0.45em',
+            textTransform: 'uppercase',
+            color: CALIPSO,
+          }}>
+            Restaurant
           </p>
 
-          {/* Decorative line */}
-          <div style={{ width: '60px', height: '1.5px', background: CALIPSO, margin: '14px auto 14px' }} />
+          <div style={{ width: '52px', height: '1.5px', background: CALIPSO, margin: '18px auto 16px' }} />
 
-          {/* Tagline */}
-          <p style={{ ...T.ui, fontSize: '11px', color: 'rgba(255,255,255,0.40)', letterSpacing: '0.08em', marginBottom: '32px' }}>
+          <p style={{
+            fontFamily: sans,
+            fontWeight: 300,
+            fontSize: '12px',
+            color: 'rgba(255,255,255,0.42)',
+            letterSpacing: '0.10em',
+            marginBottom: '44px',
+          }}>
             Primera línea costera &nbsp;·&nbsp; Concón, Chile
           </p>
         </div>
 
         {/* ── Category nav ─────────────────────────────────── */}
-        <div ref={navRef} style={{ background: INK, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="max-w-3xl mx-auto px-4">
-            <div className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth">
-              <button
-                onClick={() => setActiveCategory('all')}
-                className="snap-center"
-                style={{
-                  ...T.catNav,
-                  flexShrink: 0,
-                  padding: '14px 16px',
-                  color: activeCategory === 'all' ? CALIPSO : 'rgba(255,255,255,0.68)',
-                  background: 'none',
-                  border: 'none',
-                  borderBottom: activeCategory === 'all' ? `2px solid ${CALIPSO}` : '2px solid transparent',
-                  cursor: 'pointer',
-                  transition: 'all 150ms ease',
-                }}
-              >
-                {lang === 'en' ? 'All' : 'Todo'}
-              </button>
-              {categories.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className="snap-center"
-                  style={{
-                    ...T.catNav,
-                    flexShrink: 0,
-                    padding: '14px 16px',
-                    color: activeCategory === cat.id ? CALIPSO : 'rgba(255,255,255,0.68)',
-                    background: 'none',
-                    border: 'none',
-                    borderBottom: activeCategory === cat.id ? `2px solid ${CALIPSO}` : '2px solid transparent',
-                    cursor: 'pointer',
-                    transition: 'all 150ms ease',
-                  }}
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
+        <div
+          ref={navRef}
+          style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: INK }}
+        >
+          <div style={{ maxWidth: '720px', margin: '0 auto', padding: '0 16px' }}>
+            <NavPills />
           </div>
         </div>
 
-        {/* Sticky shadow nav clone */}
+        {/* Sticky nav clone */}
         {navSticky && (
-          <div
-            className="fixed top-[68px] left-0 right-0 z-40"
-            style={{ background: INK, borderBottom: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}
-          >
-            <div className="max-w-3xl mx-auto px-4">
-              <div className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth">
-                <button
-                  onClick={() => setActiveCategory('all')}
-                  className="snap-center"
-                  style={{
-                    ...T.catNav,
-                    flexShrink: 0, padding: '12px 14px',
-                    color: activeCategory === 'all' ? CALIPSO : 'rgba(255,255,255,0.68)',
-                    background: 'none', border: 'none',
-                    borderBottom: activeCategory === 'all' ? `2px solid ${CALIPSO}` : '2px solid transparent',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {lang === 'en' ? 'All' : 'Todo'}
-                </button>
-                {categories.map(cat => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
-                    className="snap-center"
-                    style={{
-                      ...T.catNav,
-                      flexShrink: 0, padding: '12px 14px',
-                      color: activeCategory === cat.id ? CALIPSO : 'rgba(255,255,255,0.68)',
-                      background: 'none', border: 'none',
-                      borderBottom: activeCategory === cat.id ? `2px solid ${CALIPSO}` : '2px solid transparent',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
+          <div style={{
+            position: 'fixed',
+            top: '68px',
+            left: 0,
+            right: 0,
+            zIndex: 40,
+            background: INK,
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.35)',
+          }}>
+            <div style={{ maxWidth: '720px', margin: '0 auto', padding: '0 16px' }}>
+              <NavPills compact />
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Menu content ──────────────────────────────────── */}
-      <div className="max-w-3xl mx-auto">
+      {/* ── Menu sections ────────────────────────────────────── */}
+      <div style={{ maxWidth: '720px', margin: '0 auto' }}>
         {sections.length === 0 ? (
-          <div className="text-center py-24">
-            <p style={{ ...T.heading, fontSize: '20px', color: INK55 }}>No hay platos en esta categoría</p>
+          <div style={{ textAlign: 'center', padding: '96px 32px' }}>
+            <p style={{ fontFamily: serif, fontStyle: 'italic', fontWeight: 300, fontSize: '22px', color: INK60 }}>
+              No hay platos en esta categoría
+            </p>
           </div>
         ) : (
-          sections.map((section, sIdx) => (
+          sections.map((section, idx) => (
             <section key={section.id} id={`sec-${section.slug}`}>
-              {/* Ornament before section (except first) */}
-              {sIdx > 0 && <Ornament />}
+              {idx > 0 && <Ornament />}
 
-              {/* Section divider */}
-              <SectionDivider name={section.name} />
+              <SectionHeader category={section} />
 
-              {/* Category heading */}
-              <div className="text-center py-6 px-6">
-                <h2 style={{ ...T.heading, fontSize: '32px', color: INK, lineHeight: 1.1 }}>
-                  {section.name}
-                </h2>
-                {section.description && (
-                  <p style={{ ...T.desc, color: INK55, marginTop: '6px', fontSize: '12px' }}>
-                    {section.description}
-                  </p>
-                )}
-              </div>
+              {section.featured.map(item => (
+                <FeaturedCard key={item.id} item={item} />
+              ))}
 
-              {/* Items grid — 2 col desktop, 1 col mobile */}
-              <div
-                className="grid grid-cols-1 md:grid-cols-2"
-                style={{ borderTop: `1px solid ${INK08}`, borderLeft: `1px solid ${INK08}`, background: PAPER }}
-              >
-                {/* Featured items — full width */}
-                {section.featured.map(item => (
-                  <FeaturedCard key={item.id} item={item} />
-                ))}
-
-                {/* Standard items */}
-                {section.standard.map((item) => {
-                  return (
-                    <div
-                      key={item.id}
-                      style={{ borderRight: `1px solid ${INK08}`, borderBottom: `1px solid ${INK08}` }}
-                    >
-                      <DishRow item={item} isLast={false} />
-                    </div>
-                  )
-                })}
-              </div>
+              {section.standard.map(item => (
+                <DishRow key={item.id} item={item} />
+              ))}
             </section>
           ))
         )}
 
-        {/* ── Footer of carta ────────────────────────────── */}
-        <footer className="text-center py-14 px-6" style={{ borderTop: `1px solid ${INK08}` }}>
-          <div style={{ width: '40px', height: '1.5px', background: CALIPSO, margin: '0 auto 20px' }} />
+        {/* ── Footer ─────────────────────────────────────────── */}
+        <footer style={{ textAlign: 'center', padding: '56px 32px 72px', borderTop: `1px solid ${INK10}` }}>
+          <div style={{ width: '40px', height: '1.5px', background: CALIPSO, margin: '0 auto 22px' }} />
 
-          <p style={{ ...T.label, fontSize: '11px', letterSpacing: '0.15em', color: INK, opacity: 0.35, marginBottom: '4px' }}>
-            AV. BORGOÑO 14900 &nbsp;·&nbsp; CONCÓN &nbsp;·&nbsp; +56 9 8765 4321
+          <p style={{
+            fontFamily: sans,
+            fontSize: '12px',
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            color: INK,
+            opacity: 0.38,
+            marginBottom: '6px',
+          }}>
+            Av. Borgoño 14900 &nbsp;·&nbsp; Concón &nbsp;·&nbsp; +56 9 8765 4321
           </p>
-          <p style={{ ...T.label, fontSize: '10px', letterSpacing: '0.1em', color: INK, opacity: 0.28, marginBottom: '20px' }}>
-            MAR–VIE 13:00–23:00 &nbsp;·&nbsp; SÁB–DOM 12:30–23:30
+          <p style={{
+            fontFamily: sans,
+            fontSize: '11px',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: INK,
+            opacity: 0.30,
+            marginBottom: '22px',
+          }}>
+            Mar–Vie 13:00–23:00 &nbsp;·&nbsp; Sáb–Dom 12:30–23:30
           </p>
 
-          <div style={{ width: '40px', height: '1.5px', background: CALIPSO, margin: '0 auto 20px' }} />
+          <div style={{ width: '40px', height: '1.5px', background: CALIPSO, margin: '0 auto 22px' }} />
 
-          <p style={{ ...T.ui, fontSize: '10px', color: INK, opacity: 0.45, maxWidth: '380px', margin: '0 auto', lineHeight: 1.7 }}>
-            Carta sujeta a disponibilidad del producto. Informe a su garzón sobre alergias o
-            intolerancias alimentarias. Precios incluyen IVA.
+          <p style={{
+            fontFamily: sans,
+            fontWeight: 300,
+            fontSize: '12px',
+            color: INK,
+            opacity: 0.42,
+            maxWidth: '400px',
+            margin: '0 auto',
+            lineHeight: 1.75,
+          }}>
+            Carta sujeta a disponibilidad del producto. Informe a su garzón sobre
+            alergias o intolerancias alimentarias. Precios incluyen IVA.
           </p>
         </footer>
       </div>
