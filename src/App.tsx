@@ -12,6 +12,10 @@ import MenuAdmin from './pages/admin/MenuAdmin'
 import TablesAdmin from './pages/admin/TablesAdmin'
 import ReservationsAdmin from './pages/admin/ReservationsAdmin'
 import Inventory from './pages/admin/Inventory'
+import Orders from './pages/admin/Orders'
+import Kitchen from './pages/admin/Kitchen'
+import Reports from './pages/admin/Reports'
+import Notifications from './pages/admin/Notifications'
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -23,6 +27,21 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
   )
 }
 
+function AdminRoutes() {
+  return (
+    <Routes>
+      <Route index element={<Dashboard />} />
+      <Route path="carta" element={<MenuAdmin />} />
+      <Route path="mesas" element={<TablesAdmin />} />
+      <Route path="reservas" element={<ReservationsAdmin />} />
+      <Route path="inventario" element={<Inventory />} />
+      <Route path="comandas" element={<Orders />} />
+      <Route path="reportes" element={<Reports />} />
+      <Route path="notificaciones" element={<Notifications />} />
+    </Routes>
+  )
+}
+
 export default function App() {
   const { pathname } = useLocation()
   const isAdmin = pathname.startsWith('/admin')
@@ -31,18 +50,14 @@ export default function App() {
     return (
       <Routes>
         <Route path="/admin/login" element={<Login />} />
+        {/* Kitchen: full-screen, no sidebar */}
+        <Route path="/admin/cocina" element={<ProtectedRoute><Kitchen /></ProtectedRoute>} />
         <Route
           path="/admin/*"
           element={
             <ProtectedRoute>
               <AdminLayout>
-                <Routes>
-                  <Route index element={<Dashboard />} />
-                  <Route path="carta" element={<MenuAdmin />} />
-                  <Route path="mesas" element={<TablesAdmin />} />
-                  <Route path="reservas" element={<ReservationsAdmin />} />
-                  <Route path="inventario" element={<Inventory />} />
-                </Routes>
+                <AdminRoutes />
               </AdminLayout>
             </ProtectedRoute>
           }
@@ -54,6 +69,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/admin/login" element={<Login />} />
+      <Route path="/admin/cocina" element={<ProtectedRoute><Kitchen /></ProtectedRoute>} />
       <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
       <Route path="/carta" element={<PublicLayout><Menu /></PublicLayout>} />
       <Route path="/reservas" element={<PublicLayout><Reservations /></PublicLayout>} />
@@ -62,12 +78,7 @@ export default function App() {
         element={
           <ProtectedRoute>
             <AdminLayout>
-              <Routes>
-                <Route index element={<Dashboard />} />
-                <Route path="carta" element={<MenuAdmin />} />
-                <Route path="mesas" element={<TablesAdmin />} />
-                <Route path="reservas" element={<ReservationsAdmin />} />
-              </Routes>
+              <AdminRoutes />
             </AdminLayout>
           </ProtectedRoute>
         }

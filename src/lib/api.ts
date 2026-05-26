@@ -1,6 +1,9 @@
 import { supabase } from './supabase'
-import { mockCategories, mockMenuItems, mockTables, mockReservations, mockInventory } from './mock-data'
-import type { Category, MenuItem, Table, Reservation, InventoryItem } from '../types'
+import {
+  mockCategories, mockMenuItems, mockTables, mockReservations,
+  mockInventory, mockOrders, mockOrderItems, mockHistoricalOrders,
+} from './mock-data'
+import type { Category, MenuItem, Table, Reservation, InventoryItem, Order, OrderItem, AppNotification } from '../types'
 
 const USE_MOCK = !import.meta.env.VITE_SUPABASE_URL
 
@@ -152,6 +155,228 @@ export async function getInventory(): Promise<InventoryItem[]> {
     .order('updated_at', { ascending: false })
   if (error) throw error
   return data as unknown as InventoryItem[]
+}
+
+// ── Orders ────────────────────────────────────────────────────────────────────
+
+function hydrateOrders(orders: Order[]): Order[] {
+  return orders.map(ord => ({
+    ...ord,
+    table: mockTables.find(t => t.id === ord.table_id),
+    items: mockOrderItems
+      .filter(i => i.order_id === ord.id)
+      .map(i => ({ ...i, menu_item: mockMenuItems.find(m => m.id === i.menu_item_id) })),
+  }))
+}
+
+export async function getActiveOrders(): Promise<Order[]> {
+  if (USE_MOCK) {
+    const active = mockOrders.filter(o => o.status !== 'paid' && o.status !== 'cancelled')
+    return hydrateOrders(active)
+  }
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, table:tables(*), items:order_items(*, menu_item:menu_items(*))')
+    .not('status', 'in', '("paid","cancelled")')
+    .order('created_at')
+  if (error) throw error
+  return data as unknown as Order[]
+}
+
+export async function getAllOrders(): Promise<Order[]> {
+  if (USE_MOCK) return [...hydrateOrders(mockOrders), ...mockHistoricalOrders]
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, table:tables(*), items:order_items(*, menu_item:menu_items(*))')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data as unknown as Order[]
+}
+
+export async function createOrder(tableId: string, notes?: string): Promise<Order> {
+  if (USE_MOCK) {
+    const order: Order = {
+      id: `ord-${Date.now()}`, table_id: tableId, status: 'open',
+      notes: notes ?? null, total: 0,
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    }
+    mockOrders.push(order)
+    return { ...order, table: mockTables.find(t => t.id === tableId), items: [] }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('orders') as any)
+    .insert({ table_id: tableId, notes: notes ?? null, status: 'open', total: 0 })
+    .select().single()
+  if (error) throw error
+  return data as Order
+}
+
+export async function addOrderItem(
+  orderId: string, menuItemId: string, quantity: number, notes?: string
+): Promise<OrderItem> {
+  const menuItem = mockMenuItems.find(m => m.id === menuItemId)
+  const unitPrice = menuItem?.price ?? 0
+
+  if (USE_MOCK) {
+    // Remove existing item with same menu_item_id and pending status
+    const existIdx = mockOrderItems.findIndex(
+      i => i.order_id === orderId && i.menu_item_id === menuItemId && i.status === 'pending'
+    )
+    if (existIdx >= 0) {
+      mockOrderItems[existIdx].quantity += quantity
+      const item = mockOrderItems[existIdx]
+      updateOrderTotal(orderId)
+      return { ...item, menu_item: menuItem }
+    }
+    const item: OrderItem = {
+      id: `oi-${Date.now()}`, order_id: orderId, menu_item_id: menuItemId,
+      quantity, unit_price: unitPrice, notes: notes ?? null,
+      status: 'pending', created_at: new Date().toISOString(),
+    }
+    mockOrderItems.push(item)
+    updateOrderTotal(orderId)
+    return { ...item, menu_item: menuItem }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('order_items') as any)
+    .insert({ order_id: orderId, menu_item_id: menuItemId, quantity, unit_price: unitPrice, notes: notes ?? null, status: 'pending' })
+    .select().single()
+  if (error) throw error
+  return data as OrderItem
+}
+
+function updateOrderTotal(orderId: string) {
+  const order = mockOrders.find(o => o.id === orderId)
+  if (!order) return
+  const items = mockOrderItems.filter(i => i.order_id === orderId)
+  order.total = items.reduce((s, i) => s + i.unit_price * i.quantity, 0)
+  order.updated_at = new Date().toISOString()
+}
+
+export async function removeOrderItem(itemId: string): Promise<void> {
+  if (USE_MOCK) {
+    const idx = mockOrderItems.findIndex(i => i.id === itemId)
+    if (idx >= 0) {
+      const orderId = mockOrderItems[idx].order_id
+      mockOrderItems.splice(idx, 1)
+      updateOrderTotal(orderId)
+    }
+    return
+  }
+  const { error } = await supabase.from('order_items').delete().eq('id', itemId)
+  if (error) throw error
+}
+
+export async function updateOrderItemStatus(itemId: string, status: OrderItem['status']): Promise<void> {
+  if (USE_MOCK) {
+    const item = mockOrderItems.find(i => i.id === itemId)
+    if (item) { item.status = status }
+    return
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from('order_items') as any).update({ status }).eq('id', itemId)
+  if (error) throw error
+}
+
+export async function sendOrderToKitchen(orderId: string): Promise<void> {
+  if (USE_MOCK) {
+    mockOrderItems
+      .filter(i => i.order_id === orderId && i.status === 'pending')
+      .forEach(i => { i.status = 'in_kitchen' })
+    const order = mockOrders.find(o => o.id === orderId)
+    if (order) { order.status = 'in_kitchen'; order.updated_at = new Date().toISOString() }
+    return
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase.from('order_items') as any).update({ status: 'in_kitchen' }).eq('order_id', orderId).eq('status', 'pending')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase.from('orders') as any).update({ status: 'in_kitchen' }).eq('id', orderId)
+}
+
+export async function updateOrderStatus(orderId: string, status: Order['status']): Promise<void> {
+  if (USE_MOCK) {
+    const order = mockOrders.find(o => o.id === orderId)
+    if (order) { order.status = status; order.updated_at = new Date().toISOString() }
+    return
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from('orders') as any).update({ status }).eq('id', orderId)
+  if (error) throw error
+}
+
+export async function closeOrder(orderId: string): Promise<void> {
+  if (USE_MOCK) {
+    const order = mockOrders.find(o => o.id === orderId)
+    if (order) {
+      order.status = 'paid'
+      order.updated_at = new Date().toISOString()
+      mockHistoricalOrders.push({ ...order })
+      const idx = mockOrders.indexOf(order)
+      mockOrders.splice(idx, 1)
+    }
+    return
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase.from('orders') as any).update({ status: 'paid' }).eq('id', orderId)
+}
+
+// ── Notifications (computed from data) ────────────────────────────────────────
+
+export function computeNotifications(
+  reservations: Reservation[], inventory: InventoryItem[]
+): AppNotification[] {
+  const now = Date.now()
+  const notes: AppNotification[] = []
+
+  // New reservations (last 24h)
+  reservations
+    .filter(r => r.status === 'pending' && now - new Date(r.created_at).getTime() < 86400000)
+    .forEach(r => {
+      notes.push({
+        id: `res-new-${r.id}`, type: 'reservation_new', read: false,
+        title: 'Nueva reserva recibida',
+        body: `${r.guest_name} · ${r.party_size} pers. · ${r.date} ${r.time}`,
+        link: '/admin/reservas',
+        created_at: r.created_at,
+      })
+    })
+
+  // Old pending (> 12h without confirmation)
+  reservations
+    .filter(r => r.status === 'pending' && now - new Date(r.created_at).getTime() > 43200000)
+    .forEach(r => {
+      notes.push({
+        id: `res-pending-${r.id}`, type: 'reservation_pending', read: false,
+        title: 'Reserva sin confirmar',
+        body: `${r.guest_name} lleva más de 12 h esperando confirmación`,
+        link: '/admin/reservas',
+        created_at: r.created_at,
+      })
+    })
+
+  // Stock out
+  inventory.filter(i => i.stock_quantity === 0).forEach(i => {
+    notes.push({
+      id: `stock-out-${i.id}`, type: 'stock_out', read: false,
+      title: 'Sin stock',
+      body: `${i.menu_item?.name ?? i.menu_item_id} — agotado`,
+      link: '/admin/inventario',
+      created_at: i.updated_at,
+    })
+  })
+
+  // Stock low
+  inventory.filter(i => i.stock_quantity > 0 && i.stock_quantity < i.min_stock).forEach(i => {
+    notes.push({
+      id: `stock-low-${i.id}`, type: 'stock_low', read: false,
+      title: 'Stock bajo',
+      body: `${i.menu_item?.name ?? i.menu_item_id} — ${i.stock_quantity} ${i.unit} (mín. ${i.min_stock})`,
+      link: '/admin/inventario',
+      created_at: i.updated_at,
+    })
+  })
+
+  return notes.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 }
 
 export async function upsertInventoryItem(

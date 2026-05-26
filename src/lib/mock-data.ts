@@ -1,4 +1,4 @@
-import type { Category, MenuItem, Table, Reservation, InventoryItem } from '../types'
+import type { Category, MenuItem, Table, Reservation, InventoryItem, Order, OrderItem } from '../types'
 
 // Helper: date offset from today
 function daysFromNow(n: number): string {
@@ -276,3 +276,72 @@ export const mockInventory: InventoryItem[] = [
   { id: 'inv-17', menu_item_id: '17', stock_quantity: 30, unit: 'porciones', min_stock: 10, cost_price: 2400,  updated_at: new Date().toISOString() },
   { id: 'inv-18', menu_item_id: '18', stock_quantity: 18, unit: 'botellas',  min_stock: 6,  cost_price: 4500,  updated_at: new Date().toISOString() },
 ]
+
+// ── Active Orders (current service) ──────────────────────────────────────────
+
+export const mockOrderItems: OrderItem[] = [
+  // ord-1 Table 1 — open, 15 min ago
+  { id: 'oi-1',  order_id: 'ord-1', menu_item_id: '2',  quantity: 1, unit_price: 12900, notes: null,                   status: 'pending',    created_at: new Date(Date.now() - 900000).toISOString() },
+  { id: 'oi-2',  order_id: 'ord-1', menu_item_id: '5',  quantity: 2, unit_price: 11900, notes: null,                   status: 'pending',    created_at: new Date(Date.now() - 900000).toISOString() },
+  // ord-2 Table 3 — in_kitchen, 30 min ago
+  { id: 'oi-3',  order_id: 'ord-2', menu_item_id: '8',  quantity: 1, unit_price: 18900, notes: null,                   status: 'in_kitchen', created_at: new Date(Date.now() - 1800000).toISOString() },
+  { id: 'oi-4',  order_id: 'ord-2', menu_item_id: '12', quantity: 2, unit_price: 19900, notes: 'sin mariscos para uno', status: 'in_kitchen', created_at: new Date(Date.now() - 1800000).toISOString() },
+  { id: 'oi-5',  order_id: 'ord-2', menu_item_id: '17', quantity: 2, unit_price: 6900,  notes: null,                   status: 'ready',      created_at: new Date(Date.now() - 1800000).toISOString() },
+  // ord-3 Table 5 — ready, 45 min ago
+  { id: 'oi-6',  order_id: 'ord-3', menu_item_id: '9',  quantity: 1, unit_price: 42900, notes: null,                   status: 'ready',      created_at: new Date(Date.now() - 2700000).toISOString() },
+  { id: 'oi-7',  order_id: 'ord-3', menu_item_id: '6',  quantity: 1, unit_price: 13900, notes: null,                   status: 'ready',      created_at: new Date(Date.now() - 2700000).toISOString() },
+  { id: 'oi-8',  order_id: 'ord-3', menu_item_id: '18', quantity: 2, unit_price: 8900,  notes: null,                   status: 'ready',      created_at: new Date(Date.now() - 2700000).toISOString() },
+  // ord-4 Table 7 — in_kitchen, mixed, 60 min ago
+  { id: 'oi-9',  order_id: 'ord-4', menu_item_id: '1',  quantity: 2, unit_price: 14900, notes: null,                   status: 'delivered',  created_at: new Date(Date.now() - 3600000).toISOString() },
+  { id: 'oi-10', order_id: 'ord-4', menu_item_id: '13', quantity: 2, unit_price: 17900, notes: null,                   status: 'in_kitchen', created_at: new Date(Date.now() - 3600000).toISOString() },
+  { id: 'oi-11', order_id: 'ord-4', menu_item_id: '10', quantity: 1, unit_price: 16900, notes: null,                   status: 'in_kitchen', created_at: new Date(Date.now() - 3600000).toISOString() },
+  { id: 'oi-12', order_id: 'ord-4', menu_item_id: '18', quantity: 2, unit_price: 8900,  notes: null,                   status: 'delivered',  created_at: new Date(Date.now() - 3600000).toISOString() },
+  // ord-5 Table 2 — open, 8 min ago
+  { id: 'oi-13', order_id: 'ord-5', menu_item_id: '3',  quantity: 2, unit_price: 9900,  notes: null,                   status: 'pending',    created_at: new Date(Date.now() - 480000).toISOString() },
+  { id: 'oi-14', order_id: 'ord-5', menu_item_id: '16', quantity: 1, unit_price: 7900,  notes: 'sin maracuyá',          status: 'pending',    created_at: new Date(Date.now() - 480000).toISOString() },
+]
+
+export const mockOrders: Order[] = [
+  { id: 'ord-1', table_id: '1', status: 'open',       notes: null,       total: 36700, created_at: new Date(Date.now() - 900000).toISOString(),  updated_at: new Date(Date.now() - 900000).toISOString() },
+  { id: 'ord-2', table_id: '3', status: 'in_kitchen', notes: null,       total: 65600, created_at: new Date(Date.now() - 1800000).toISOString(), updated_at: new Date(Date.now() - 1200000).toISOString() },
+  { id: 'ord-3', table_id: '5', status: 'ready',      notes: 'Mesa VIP', total: 74600, created_at: new Date(Date.now() - 2700000).toISOString(), updated_at: new Date(Date.now() - 600000).toISOString() },
+  { id: 'ord-4', table_id: '7', status: 'in_kitchen', notes: null,       total: 84300, created_at: new Date(Date.now() - 3600000).toISOString(), updated_at: new Date(Date.now() - 1800000).toISOString() },
+  { id: 'ord-5', table_id: '2', status: 'open',       notes: null,       total: 27700, created_at: new Date(Date.now() - 480000).toISOString(),  updated_at: new Date(Date.now() - 480000).toISOString() },
+]
+
+// ── Historical paid orders (last 30 days, for reports) ────────────────────────
+
+function buildHistoricalOrders(): Order[] {
+  const seed: [number, number, string][] = [
+    // [daysAgo, total, tableId]
+    [0,  87400, '3'], [0,  42800, '6'],
+    [1,  65300, '5'], [1,  31800, '7'], [1, 112400, '9'],
+    [2,  54700, '2'], [2,  71200, '4'],
+    [3,  38900, '1'], [3,  93200, '8'],
+    [4,  62800, '3'], [4,  45600, '5'],
+    [5, 108300, '9'], [5,  42100, '6'],
+    [6,  88700, '7'], [6,  34600, '2'],
+    [7,  76400, '4'], [7,  55600, '3'],
+    [9,  91200, '5'], [10, 67800, '1'],
+    [12, 83400, '9'], [14, 72300, '7'],
+    [16, 55600, '2'], [18, 94100, '5'],
+    [21, 61800, '3'], [24, 88200, '9'],
+    [27, 71300, '4'], [30, 65800, '6'],
+  ]
+  return seed.map(([days, total, tableId], i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - days)
+    d.setHours(19 + Math.floor(i % 4), (i * 7) % 60, 0, 0)
+    return {
+      id: `hist-${i}`,
+      table_id: tableId,
+      status: 'paid',
+      notes: null,
+      total,
+      created_at: d.toISOString(),
+      updated_at: d.toISOString(),
+    }
+  })
+}
+
+export const mockHistoricalOrders: Order[] = buildHistoricalOrders()

@@ -61,3 +61,37 @@ export interface InventoryItem {
   updated_at: string
   menu_item?: MenuItem
 }
+
+export interface OrderItem {
+  id: string
+  order_id: string
+  menu_item_id: string
+  quantity: number
+  unit_price: number
+  notes: string | null
+  status: 'pending' | 'in_kitchen' | 'ready' | 'delivered'
+  created_at: string
+  menu_item?: MenuItem
+}
+
+export interface Order {
+  id: string
+  table_id: string
+  status: 'open' | 'in_kitchen' | 'ready' | 'paid' | 'cancelled'
+  notes: string | null
+  total: number
+  created_at: string
+  updated_at: string
+  table?: Table
+  items?: OrderItem[]
+}
+
+export interface AppNotification {
+  id: string
+  type: 'reservation_new' | 'reservation_pending' | 'stock_low' | 'stock_out' | 'order_ready'
+  title: string
+  body: string
+  read: boolean
+  link?: string
+  created_at: string
+}
