@@ -16,7 +16,7 @@ interface CarouselProps {
   style?: React.CSSProperties
 }
 
-const OVERLAY = 'linear-gradient(to bottom, rgba(28,43,45,0.50) 0%, rgba(28,43,45,0.72) 100%)'
+const OVERLAY = 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.72) 100%)'
 
 export default function Carousel({
   slides,

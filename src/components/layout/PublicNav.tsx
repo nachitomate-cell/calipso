@@ -14,9 +14,10 @@ export default function PublicNav() {
   const { pathname } = useLocation()
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-calipso border-b border-white/20">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-ink/95 backdrop-blur-sm border-b border-white/10">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 md:h-[68px]">
+
           {/* Logo */}
           <Link to="/" className="flex items-center">
             <Logo size="sm" />
@@ -31,8 +32,8 @@ export default function PublicNav() {
                 className={clsx(
                   'text-sm tracking-widest uppercase font-medium transition-colors duration-200',
                   pathname.startsWith(to)
-                    ? 'text-arena'
-                    : 'text-white/90 hover:text-arena'
+                    ? 'text-calipso'
+                    : 'text-white/85 hover:text-white'
                 )}
               >
                 {label}
@@ -48,7 +49,7 @@ export default function PublicNav() {
 
           {/* Mobile toggle */}
           <button
-            className="md:hidden text-white p-2"
+            className="md:hidden text-white/90 hover:text-white p-2 transition-colors"
             onClick={() => setOpen(!open)}
             aria-label="Toggle menu"
           >
@@ -59,14 +60,14 @@ export default function PublicNav() {
 
       {/* Mobile drawer */}
       {open && (
-        <div className="md:hidden bg-calipso border-t border-white/20">
+        <div className="md:hidden bg-ink border-t border-white/10">
           <div className="px-6 py-6 space-y-4">
             {links.map(({ to, label }) => (
               <Link
                 key={to}
                 to={to}
                 onClick={() => setOpen(false)}
-                className="block text-white/90 hover:text-arena text-base font-medium uppercase tracking-widest transition-colors"
+                className="block text-white/85 hover:text-white text-base font-medium uppercase tracking-widest transition-colors"
               >
                 {label}
               </Link>
@@ -74,7 +75,7 @@ export default function PublicNav() {
             <Link
               to="/reservas"
               onClick={() => setOpen(false)}
-              className="block bg-coral text-white font-semibold text-center py-3 rounded-card mt-4 uppercase tracking-wide text-sm"
+              className="block bg-coral hover:bg-coral-hover text-white font-semibold text-center py-3 rounded-card mt-4 uppercase tracking-wide text-sm transition-colors"
             >
               Reservar una mesa
             </Link>

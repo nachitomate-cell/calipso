@@ -6,6 +6,9 @@ import { PHOTOS } from '../lib/images'
 const INK = '#1C2B2D'
 const CALIPSO = '#29B5D0'
 
+// Sombra de texto para garantizar legibilidad sobre fotos
+const TEXT_SHADOW = '0 1px 4px rgba(0,0,0,0.45)'
+
 export default function Home() {
   return (
     <div style={{ minHeight: '100vh', fontFamily: 'Jost, system-ui, sans-serif' }}>
@@ -19,33 +22,39 @@ export default function Home() {
         className="flex flex-col"
       >
         <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-16">
-          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '10px', letterSpacing: '0.35em', textTransform: 'uppercase', fontFamily: 'Jost, sans-serif', fontWeight: 400, marginBottom: '20px' }}>
+          <p style={{
+            color: 'rgba(255,255,255,0.82)',
+            fontSize: '11px', letterSpacing: '0.35em', textTransform: 'uppercase',
+            fontFamily: 'Jost, sans-serif', fontWeight: 400, marginBottom: '20px',
+            textShadow: TEXT_SHADOW,
+          }}>
             Concón, Chile &nbsp;·&nbsp; Cocina de Mar
           </p>
           <h1 style={{
             fontFamily: '"Cormorant Garamond", Georgia, serif',
-            fontStyle: 'italic',
-            fontWeight: 300,
+            fontStyle: 'italic', fontWeight: 300,
             fontSize: 'clamp(64px, 12vw, 110px)',
-            color: 'white',
-            lineHeight: 1,
-            marginBottom: '8px',
+            color: 'white', lineHeight: 1, marginBottom: '8px',
+            textShadow: '0 2px 12px rgba(0,0,0,0.50)',
           }}>
             Calipso
           </h1>
           <p style={{
             fontFamily: '"Cormorant Garamond", Georgia, serif',
-            fontStyle: 'italic',
-            fontWeight: 300,
-            fontSize: '18px',
-            color: 'rgba(255,255,255,0.50)',
-            marginBottom: '36px',
-            letterSpacing: '0.15em',
+            fontStyle: 'italic', fontWeight: 300,
+            fontSize: '18px', color: 'rgba(255,255,255,0.78)',
+            marginBottom: '36px', letterSpacing: '0.15em',
+            textShadow: TEXT_SHADOW,
           }}>
             Restaurant
           </p>
           <div style={{ width: '40px', height: '1.5px', background: CALIPSO, margin: '0 auto 32px' }} />
-          <p style={{ color: 'rgba(255,255,255,0.70)', fontSize: '14px', maxWidth: '380px', lineHeight: 1.75, fontWeight: 300, marginBottom: '40px' }}>
+          <p style={{
+            color: 'rgba(255,255,255,0.85)',
+            fontSize: '14px', maxWidth: '380px', lineHeight: 1.75,
+            fontWeight: 300, marginBottom: '40px',
+            textShadow: TEXT_SHADOW,
+          }}>
             El océano en su expresión más pura. Mariscos frescos del Pacífico,
             técnica depurada y terraza frente al mar.
           </p>
@@ -70,19 +79,18 @@ export default function Home() {
               to="/carta"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '8px',
-                border: '1.5px solid rgba(255,255,255,0.60)',
+                border: '1.5px solid rgba(255,255,255,0.75)',
                 color: 'white', fontWeight: 400, padding: '13px 30px',
                 borderRadius: '4px', textDecoration: 'none',
                 fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase',
-                transition: 'all 200ms ease',
-                background: 'transparent',
+                transition: 'all 200ms ease', background: 'transparent',
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.borderColor = 'white'
-                e.currentTarget.style.background = 'rgba(255,255,255,0.10)'
+                e.currentTarget.style.background = 'rgba(255,255,255,0.15)'
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.60)'
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.75)'
                 e.currentTarget.style.background = 'transparent'
               }}
             >
@@ -91,7 +99,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Bottom fade — suave y gradual para no cortar la imagen */}
+        {/* Bottom fade suave */}
         <div style={{
           height: '140px',
           background: 'linear-gradient(to bottom, transparent 0%, rgba(253,250,245,0.55) 60%, #FDFAF5 100%)',
@@ -104,26 +112,14 @@ export default function Home() {
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              {
-                Icon: Waves,
-                title: 'Del Océano a tu Mesa',
-                desc: 'Trabajamos directamente con pescadores artesanales de Caleta Higuerillas y Quintero.',
-              },
-              {
-                Icon: ChefHat,
-                title: 'Técnica de Autor',
-                desc: 'Cocina chilena contemporánea con influencias nikkei y mediterráneas.',
-              },
-              {
-                Icon: Sunset,
-                title: 'Terraza Frente al Mar',
-                desc: 'Disfruta el atardecer del Pacífico desde nuestra terraza sobre las rocas.',
-              },
+              { Icon: Waves,   title: 'Del Océano a tu Mesa',  desc: 'Trabajamos directamente con pescadores artesanales de Caleta Higuerillas y Quintero.' },
+              { Icon: ChefHat, title: 'Técnica de Autor',       desc: 'Cocina chilena contemporánea con influencias nikkei y mediterráneas.' },
+              { Icon: Sunset,  title: 'Terraza Frente al Mar',  desc: 'Disfruta el atardecer del Pacífico desde nuestra terraza sobre las rocas.' },
             ].map(({ Icon, title, desc }) => (
               <div
                 key={title}
                 className="group transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
-                style={{ textAlign: 'center', padding: '32px 24px', background: 'white', borderRadius: '4px', border: '1px solid rgba(28,43,45,0.07)' }}
+                style={{ textAlign: 'center', padding: '32px 24px', background: 'white', borderRadius: '4px', border: '1px solid rgba(28,43,45,0.08)' }}
               >
                 <div
                   className="transition-transform duration-300 group-hover:scale-110"
@@ -134,7 +130,7 @@ export default function Home() {
                 <h3 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 400, fontSize: '22px', color: INK, marginBottom: '12px' }}>
                   {title}
                 </h3>
-                <p style={{ fontSize: '13px', color: 'rgba(28,43,45,0.72)', lineHeight: 1.7, fontWeight: 300 }}>
+                <p style={{ fontSize: '13px', color: 'rgba(28,43,45,0.78)', lineHeight: 1.7, fontWeight: 400 }}>
                   {desc}
                 </p>
               </div>
@@ -143,21 +139,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Sobre el restaurante (grid asimétrico con fotos) ───── */}
+      {/* ── Sobre el restaurante ─────────────────────────────── */}
       {(PHOTOS.aboutLarge || PHOTOS.aboutSmall) && (
         <section style={{ background: '#101C1E', padding: '0' }}>
-          {/* gap-px: la línea oscura entre celdas actúa como separador editorial */}
           <div className="grid grid-cols-1 md:grid-cols-[70%_30%] gap-px" style={{ minHeight: '380px' }}>
-            {/* Foto grande */}
             <div style={{ position: 'relative', minHeight: '280px', overflow: 'hidden' }}>
               {PHOTOS.aboutLarge ? (
                 <img
                   src={PHOTOS.aboutLarge}
                   alt="Interior de Calipso Restaurant con comensales"
-                  style={{
-                    width: '100%', height: '100%', objectFit: 'cover', display: 'block',
-                    transition: 'transform 600ms ease',
-                  }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 600ms ease' }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)' }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
                   onError={e => { e.currentTarget.style.display = 'none' }}
@@ -166,16 +157,12 @@ export default function Home() {
                 <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.04)', minHeight: '280px' }} />
               )}
             </div>
-            {/* Foto pequeña */}
             <div style={{ position: 'relative', minHeight: '200px', overflow: 'hidden' }}>
               {PHOTOS.aboutSmall ? (
                 <img
                   src={PHOTOS.aboutSmall}
                   alt="Detalle artístico — Calipso Restaurant"
-                  style={{
-                    width: '100%', height: '100%', objectFit: 'cover', display: 'block',
-                    transition: 'transform 600ms ease',
-                  }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 600ms ease' }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)' }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
                   onError={e => { e.currentTarget.style.display = 'none' }}
@@ -192,33 +179,32 @@ export default function Home() {
       <section style={{ background: 'white', padding: '96px 24px' }}>
         <div className="max-w-5xl mx-auto">
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <p style={{ color: CALIPSO, fontSize: '10px', letterSpacing: '0.35em', textTransform: 'uppercase', fontWeight: 400, marginBottom: '12px' }}>
+            <p style={{ color: CALIPSO, fontSize: '11px', letterSpacing: '0.35em', textTransform: 'uppercase', fontWeight: 500, marginBottom: '12px' }}>
               Temporada
             </p>
             <h2 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 300, fontSize: '38px', color: INK, marginBottom: '0' }}>
               Platos de Temporada
             </h2>
-            <div style={{ width: '40px', height: '1.5px', background: CALIPSO, margin: '16px auto 0', opacity: 0.5 }} />
+            <div style={{ width: '40px', height: '1.5px', background: CALIPSO, margin: '16px auto 0', opacity: 0.6 }} />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px" style={{ border: '1px solid rgba(28,43,45,0.08)', background: 'rgba(28,43,45,0.08)' }}>
             {[
-              { name: 'Langosta a la Plancha',      desc: 'Mantequilla de ajo, papas doradas y rúcula',             price: '$42.900' },
-              { name: 'Pulpo a la Brasa',            desc: 'Hummus de garbanzos, aceite de pimentón ahumado',       price: '$12.900' },
-              { name: 'Arroz Meloso de Mariscos',    desc: 'Bisque, langostinos, almejas, azafrán y alioli negro',  price: '$19.900' },
+              { name: 'Langosta a la Plancha',   desc: 'Mantequilla de ajo, papas doradas y rúcula',             price: '$42.900' },
+              { name: 'Pulpo a la Brasa',         desc: 'Hummus de garbanzos, aceite de pimentón ahumado',       price: '$12.900' },
+              { name: 'Arroz Meloso de Mariscos', desc: 'Bisque, langostinos, almejas, azafrán y alioli negro',  price: '$19.900' },
             ].map(({ name, desc, price }) => (
               <div key={name} style={{ background: '#FDFAF5', padding: '28px 24px' }}>
-                {/* Nombre ··· Precio */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '8px' }}>
                   <h3 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 400, fontSize: '20px', color: INK, flexShrink: 0 }}>
                     {name}
                   </h3>
-                  <div style={{ flex: 1, borderBottom: '1px dotted rgba(28,43,45,0.25)', marginBottom: '3px', minWidth: '16px' }} />
+                  <div style={{ flex: 1, borderBottom: '1px dotted rgba(28,43,45,0.30)', marginBottom: '3px', minWidth: '16px' }} />
                   <span style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontWeight: 400, fontSize: '17px', color: CALIPSO, flexShrink: 0 }}>
                     {price}
                   </span>
                 </div>
-                <p style={{ fontSize: '12px', color: 'rgba(28,43,45,0.68)', lineHeight: 1.6, fontWeight: 300 }}>
+                <p style={{ fontSize: '13px', color: 'rgba(28,43,45,0.75)', lineHeight: 1.6, fontWeight: 400 }}>
                   {desc}
                 </p>
               </div>
@@ -231,8 +217,8 @@ export default function Home() {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '8px',
                 border: `1.5px solid ${CALIPSO}`, color: CALIPSO,
-                padding: '10px 24px', borderRadius: '4px', textDecoration: 'none',
-                fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 400,
+                padding: '11px 26px', borderRadius: '4px', textDecoration: 'none',
+                fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 500,
                 transition: 'all 200ms ease',
               }}
               onMouseEnter={e => { e.currentTarget.style.background = CALIPSO; e.currentTarget.style.color = 'white' }}
@@ -247,18 +233,18 @@ export default function Home() {
       {/* ── CTA Reservas ──────────────────────────────────────── */}
       <section style={{ background: INK, padding: '96px 24px', textAlign: 'center' }}>
         <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-          <p style={{ color: 'rgba(255,255,255,0.50)', fontSize: '10px', letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: '16px' }}>
+          <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '11px', letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: '16px' }}>
             ¿Listo para vivir la experiencia?
           </p>
           <h2 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 300, fontSize: '40px', color: 'white', marginBottom: '24px' }}>
             Reserva tu Mesa
           </h2>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '20px', color: 'rgba(255,255,255,0.55)', fontSize: '11px', marginBottom: '32px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '20px', color: 'rgba(255,255,255,0.78)', fontSize: '13px', marginBottom: '32px' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <MapPin size={12} /> Av. Borgoño 14900, Concón
+              <MapPin size={13} /> Av. Borgoño 14900, Concón
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Clock size={12} /> Mar–Dom 13:00–23:30
+              <Clock size={13} /> Mar–Dom 13:00–23:30
             </span>
           </div>
           <Link

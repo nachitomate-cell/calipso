@@ -6,7 +6,7 @@ import { PHOTOS } from '../lib/images'
 
 const INK = '#1C2B2D'
 const CALIPSO = '#29B5D0'
-const OVERLAY = 'linear-gradient(to bottom, rgba(28,43,45,0.55), rgba(28,43,45,0.75))'
+const OVERLAY = 'linear-gradient(to bottom, rgba(0,0,0,0.60), rgba(0,0,0,0.80))'
 
 const timeSlots = [
   '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
@@ -119,7 +119,7 @@ export default function Reservations() {
                 Reserva tu<br />lugar junto al mar
               </p>
               <div style={{ width: '32px', height: '1.5px', background: CALIPSO, margin: '0 auto 16px' }} />
-              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '11px', letterSpacing: '0.15em' }}>
+              <p style={{ color: 'rgba(255,255,255,0.80)', fontSize: '12px', letterSpacing: '0.15em' }}>
                 Primera línea costera · Concón
               </p>
             </div>
@@ -132,7 +132,7 @@ export default function Reservations() {
           {/* Dark header strip — only when no photo or mobile */}
           {!showPhoto && (
             <div style={{ background: INK, padding: '56px 32px 40px', textAlign: 'center' }}>
-              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '10px', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: '12px' }}>
+              <p style={{ color: 'rgba(255,255,255,0.78)', fontSize: '10px', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: '12px' }}>
                 Bienvenido
               </p>
               <h1 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 300, fontSize: '42px', color: 'white' }}>
@@ -164,7 +164,7 @@ export default function Reservations() {
                 <h2 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontStyle: 'italic', fontWeight: 400, fontSize: '26px', color: INK, marginBottom: '10px' }}>
                   ¡Reserva Enviada!
                 </h2>
-                <p style={{ color: 'rgba(28,43,45,0.55)', fontSize: '13px', lineHeight: 1.7, marginBottom: '24px', maxWidth: '300px', margin: '0 auto 24px' }}>
+                <p style={{ color: 'rgba(28,43,45,0.75)', fontSize: '14px', lineHeight: 1.7, marginBottom: '24px', maxWidth: '300px', margin: '0 auto 24px' }}>
                   Hemos recibido tu solicitud. Te confirmaremos por correo dentro de las próximas 24 horas.
                 </p>
                 <button
@@ -186,7 +186,7 @@ export default function Reservations() {
                   ].map(({ icon: Icon, label }) => (
                     <div key={label} style={{ textAlign: 'center', padding: '10px 8px', background: 'white', border: '1px solid rgba(28,43,45,0.07)', borderRadius: '4px' }}>
                       <Icon size={14} style={{ margin: '0 auto 4px', color: CALIPSO, display: 'block' }} />
-                      <p style={{ fontSize: '10px', color: 'rgba(28,43,45,0.50)', fontWeight: 300, lineHeight: 1.3 }}>{label}</p>
+                      <p style={{ fontSize: '11px', color: 'rgba(28,43,45,0.72)', fontWeight: 400, lineHeight: 1.3 }}>{label}</p>
                     </div>
                   ))}
                 </div>
@@ -232,7 +232,7 @@ export default function Reservations() {
                 >
                   {loading ? 'Enviando…' : 'Confirmar Reserva'}
                 </button>
-                <p style={{ textAlign: 'center', fontSize: '10px', color: 'rgba(28,43,45,0.35)', letterSpacing: '0.05em' }}>
+                <p style={{ textAlign: 'center', fontSize: '11px', color: 'rgba(28,43,45,0.60)', letterSpacing: '0.05em' }}>
                   Al reservar aceptas nuestras políticas. Cancela con 24 h de anticipación.
                 </p>
               </form>
