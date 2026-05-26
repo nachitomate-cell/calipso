@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import {
   LayoutDashboard, UtensilsCrossed, Table2, CalendarDays,
-  LogOut, Menu, X, ChevronRight
+  Package, LogOut, Menu, X, ChevronRight
 } from 'lucide-react'
 import Logo from '../ui/Logo'
 import clsx from 'clsx'
@@ -13,6 +13,7 @@ const navItems = [
   { to: '/admin/carta', label: 'Carta', icon: UtensilsCrossed },
   { to: '/admin/mesas', label: 'Mesas', icon: Table2 },
   { to: '/admin/reservas', label: 'Reservas', icon: CalendarDays },
+  { to: '/admin/inventario', label: 'Inventario', icon: Package },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

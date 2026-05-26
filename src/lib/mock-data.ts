@@ -1,4 +1,11 @@
-import type { Category, MenuItem, Table, Reservation } from '../types'
+import type { Category, MenuItem, Table, Reservation, InventoryItem } from '../types'
+
+// Helper: date offset from today
+function daysFromNow(n: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  return d.toISOString().split('T')[0]
+}
 
 export const mockCategories: Category[] = [
   { id: '1', name: 'Entradas', slug: 'entradas', description: 'Para comenzar el viaje', icon: '🦪', sort_order: 1, is_active: true, created_at: '' },
@@ -142,22 +149,130 @@ export const mockTables: Table[] = [
 ]
 
 export const mockReservations: Reservation[] = [
+  // Past — completed
   {
     id: '1', table_id: '3', guest_name: 'Carlos Muñoz', guest_email: 'carlos@example.com',
-    guest_phone: '+56912345678', party_size: 4, date: '2025-05-15', time: '20:00',
-    notes: 'Aniversario de bodas, por favor decorar la mesa', status: 'confirmed',
-    created_at: '2025-05-10T14:00:00Z',
+    guest_phone: '+56912345678', party_size: 4, date: daysFromNow(-6), time: '20:00',
+    notes: 'Aniversario de bodas', status: 'completed',
+    created_at: new Date(Date.now() - 8 * 86400000).toISOString(),
   },
   {
     id: '2', table_id: '1', guest_name: 'Ana Fernández', guest_email: 'ana@example.com',
-    guest_phone: '+56987654321', party_size: 2, date: '2025-05-15', time: '13:30',
-    notes: null, status: 'pending',
-    created_at: '2025-05-11T09:00:00Z',
+    guest_phone: '+56987654321', party_size: 2, date: daysFromNow(-6), time: '13:30',
+    notes: null, status: 'completed',
+    created_at: new Date(Date.now() - 7 * 86400000).toISOString(),
   },
   {
     id: '3', table_id: '9', guest_name: 'Familia González', guest_email: 'gonzalez@example.com',
-    guest_phone: '+56911223344', party_size: 7, date: '2025-05-16', time: '14:00',
-    notes: 'Un niño alérgico al gluten', status: 'confirmed',
-    created_at: '2025-05-09T18:00:00Z',
+    guest_phone: '+56911223344', party_size: 7, date: daysFromNow(-5), time: '14:00',
+    notes: 'Un niño alérgico al gluten', status: 'completed',
+    created_at: new Date(Date.now() - 6 * 86400000).toISOString(),
   },
+  {
+    id: '4', table_id: '5', guest_name: 'Pedro Rojas', guest_email: 'pedro@example.com',
+    guest_phone: '+56922334455', party_size: 6, date: daysFromNow(-5), time: '20:30',
+    notes: null, status: 'completed',
+    created_at: new Date(Date.now() - 6 * 86400000).toISOString(),
+  },
+  {
+    id: '5', table_id: '7', guest_name: 'Valentina Soto', guest_email: 'vale@example.com',
+    guest_phone: '+56933445566', party_size: 3, date: daysFromNow(-4), time: '21:00',
+    notes: 'Sin mariscos para uno de los comensales', status: 'completed',
+    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+  },
+  {
+    id: '6', table_id: '2', guest_name: 'Ignacio Herrera', guest_email: 'iherrera@example.com',
+    guest_phone: '+56944556677', party_size: 2, date: daysFromNow(-4), time: '13:00',
+    notes: null, status: 'cancelled',
+    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+  },
+  {
+    id: '7', table_id: '8', guest_name: 'Daniela Morales', guest_email: 'dani@example.com',
+    guest_phone: '+56955667788', party_size: 4, date: daysFromNow(-3), time: '20:00',
+    notes: null, status: 'completed',
+    created_at: new Date(Date.now() - 4 * 86400000).toISOString(),
+  },
+  {
+    id: '8', table_id: '4', guest_name: 'Roberto Pizarro', guest_email: 'rpizarro@example.com',
+    guest_phone: '+56966778899', party_size: 4, date: daysFromNow(-3), time: '14:30',
+    notes: 'Mesa con vista al mar si es posible', status: 'completed',
+    created_at: new Date(Date.now() - 4 * 86400000).toISOString(),
+  },
+  {
+    id: '9', table_id: '6', guest_name: 'Camila Vega', guest_email: 'cvega@example.com',
+    guest_phone: '+56977889900', party_size: 2, date: daysFromNow(-2), time: '19:30',
+    notes: null, status: 'confirmed',
+    created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+  },
+  {
+    id: '10', table_id: '9', guest_name: 'Empresa TechCorp', guest_email: 'eventos@techcorp.cl',
+    guest_phone: '+56988990011', party_size: 10, date: daysFromNow(-2), time: '13:30',
+    notes: 'Almuerzo corporativo, necesita boleta', status: 'confirmed',
+    created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+  },
+  {
+    id: '11', table_id: '3', guest_name: 'Felipe Torres', guest_email: 'ftorres@example.com',
+    guest_phone: '+56911001122', party_size: 4, date: daysFromNow(-1), time: '20:30',
+    notes: null, status: 'confirmed',
+    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
+  // Today
+  {
+    id: '12', table_id: '1', guest_name: 'Sofía Bravo', guest_email: 'sofia@example.com',
+    guest_phone: '+56922112233', party_size: 2, date: daysFromNow(0), time: '13:00',
+    notes: null, status: 'confirmed',
+    created_at: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: '13', table_id: '5', guest_name: 'Marcelo Núñez', guest_email: 'marcelo@example.com',
+    guest_phone: '+56933223344', party_size: 5, date: daysFromNow(0), time: '20:00',
+    notes: 'Cumpleaños, sorpresa', status: 'pending',
+    created_at: new Date(Date.now() - 43200000).toISOString(),
+  },
+  // Upcoming
+  {
+    id: '14', table_id: '7', guest_name: 'Antonia Leal', guest_email: 'antonia@example.com',
+    guest_phone: '+56944334455', party_size: 3, date: daysFromNow(1), time: '21:00',
+    notes: null, status: 'pending',
+    created_at: new Date(Date.now() - 7200000).toISOString(),
+  },
+  {
+    id: '15', table_id: '3', guest_name: 'Héctor Palma', guest_email: 'hpalma@example.com',
+    guest_phone: '+56955445566', party_size: 4, date: daysFromNow(1), time: '13:30',
+    notes: null, status: 'confirmed',
+    created_at: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: '16', table_id: '9', guest_name: 'Grupo Familia Espinoza', guest_email: 'espinoza@example.com',
+    guest_phone: '+56966556677', party_size: 8, date: daysFromNow(2), time: '14:00',
+    notes: 'Reunión familiar, niños presentes', status: 'pending',
+    created_at: new Date(Date.now() - 1800000).toISOString(),
+  },
+  {
+    id: '17', table_id: '2', guest_name: 'Valentín Robles', guest_email: 'vrobles@example.com',
+    guest_phone: '+56977667788', party_size: 2, date: daysFromNow(3), time: '20:00',
+    notes: null, status: 'pending',
+    created_at: new Date().toISOString(),
+  },
+]
+
+export const mockInventory: InventoryItem[] = [
+  { id: 'inv-1',  menu_item_id: '1',  stock_quantity: 3,  unit: 'docenas',   min_stock: 5,  cost_price: 8500,  updated_at: new Date().toISOString() },
+  { id: 'inv-2',  menu_item_id: '2',  stock_quantity: 8,  unit: 'kg',        min_stock: 4,  cost_price: 6200,  updated_at: new Date().toISOString() },
+  { id: 'inv-3',  menu_item_id: '3',  stock_quantity: 12, unit: 'kg',        min_stock: 5,  cost_price: 3100,  updated_at: new Date().toISOString() },
+  { id: 'inv-4',  menu_item_id: '4',  stock_quantity: 15, unit: 'unidades',  min_stock: 8,  cost_price: 2800,  updated_at: new Date().toISOString() },
+  { id: 'inv-5',  menu_item_id: '5',  stock_quantity: 6,  unit: 'kg',        min_stock: 4,  cost_price: 5500,  updated_at: new Date().toISOString() },
+  { id: 'inv-6',  menu_item_id: '6',  stock_quantity: 2,  unit: 'kg',        min_stock: 3,  cost_price: 9800,  updated_at: new Date().toISOString() },
+  { id: 'inv-7',  menu_item_id: '7',  stock_quantity: 7,  unit: 'kg',        min_stock: 4,  cost_price: 6000,  updated_at: new Date().toISOString() },
+  { id: 'inv-8',  menu_item_id: '8',  stock_quantity: 9,  unit: 'kg',        min_stock: 4,  cost_price: 8900,  updated_at: new Date().toISOString() },
+  { id: 'inv-9',  menu_item_id: '9',  stock_quantity: 3,  unit: 'unidades',  min_stock: 5,  cost_price: 22000, updated_at: new Date().toISOString() },
+  { id: 'inv-10', menu_item_id: '10', stock_quantity: 9,  unit: 'kg',        min_stock: 4,  cost_price: 7500,  updated_at: new Date().toISOString() },
+  { id: 'inv-11', menu_item_id: '11', stock_quantity: 0,  unit: 'porciones', min_stock: 4,  cost_price: 14000, updated_at: new Date().toISOString() },
+  { id: 'inv-12', menu_item_id: '12', stock_quantity: 24, unit: 'porciones', min_stock: 10, cost_price: 8500,  updated_at: new Date().toISOString() },
+  { id: 'inv-13', menu_item_id: '13', stock_quantity: 10, unit: 'porciones', min_stock: 6,  cost_price: 7200,  updated_at: new Date().toISOString() },
+  { id: 'inv-14', menu_item_id: '14', stock_quantity: 2,  unit: 'kg',        min_stock: 3,  cost_price: 4800,  updated_at: new Date().toISOString() },
+  { id: 'inv-15', menu_item_id: '15', stock_quantity: 8,  unit: 'porciones', min_stock: 5,  cost_price: 2100,  updated_at: new Date().toISOString() },
+  { id: 'inv-16', menu_item_id: '16', stock_quantity: 5,  unit: 'porciones', min_stock: 4,  cost_price: 2900,  updated_at: new Date().toISOString() },
+  { id: 'inv-17', menu_item_id: '17', stock_quantity: 30, unit: 'porciones', min_stock: 10, cost_price: 2400,  updated_at: new Date().toISOString() },
+  { id: 'inv-18', menu_item_id: '18', stock_quantity: 18, unit: 'botellas',  min_stock: 6,  cost_price: 4500,  updated_at: new Date().toISOString() },
 ]

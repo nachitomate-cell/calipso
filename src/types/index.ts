@@ -50,3 +50,14 @@ export interface Reservation {
 
 export type ReservationStatus = Reservation['status']
 export type TableLocation = Table['location']
+
+export interface InventoryItem {
+  id: string
+  menu_item_id: string
+  stock_quantity: number
+  unit: 'kg' | 'unidades' | 'litros' | 'porciones' | 'botellas' | 'docenas'
+  min_stock: number
+  cost_price: number
+  updated_at: string
+  menu_item?: MenuItem
+}

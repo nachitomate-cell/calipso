@@ -11,6 +11,7 @@ import Dashboard from './pages/admin/Dashboard'
 import MenuAdmin from './pages/admin/MenuAdmin'
 import TablesAdmin from './pages/admin/TablesAdmin'
 import ReservationsAdmin from './pages/admin/ReservationsAdmin'
+import Inventory from './pages/admin/Inventory'
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -40,6 +41,7 @@ export default function App() {
                   <Route path="carta" element={<MenuAdmin />} />
                   <Route path="mesas" element={<TablesAdmin />} />
                   <Route path="reservas" element={<ReservationsAdmin />} />
+                  <Route path="inventario" element={<Inventory />} />
                 </Routes>
               </AdminLayout>
             </ProtectedRoute>

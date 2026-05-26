@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
-import { mockCategories, mockMenuItems, mockTables, mockReservations } from './mock-data'
-import type { Category, MenuItem, Table, Reservation } from '../types'
+import { mockCategories, mockMenuItems, mockTables, mockReservations, mockInventory } from './mock-data'
+import type { Category, MenuItem, Table, Reservation, InventoryItem } from '../types'
 
 const USE_MOCK = !import.meta.env.VITE_SUPABASE_URL
 
@@ -135,4 +135,51 @@ export async function updateReservationStatus(id: string, status: Reservation['s
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.from('reservations') as any).update({ status }).eq('id', id)
   if (error) throw error
+}
+
+// ── Inventory ─────────────────────────────────────────────────────────────────
+
+export async function getInventory(): Promise<InventoryItem[]> {
+  if (USE_MOCK) {
+    return mockInventory.map(inv => ({
+      ...inv,
+      menu_item: mockMenuItems.find(m => m.id === inv.menu_item_id),
+    }))
+  }
+  const { data, error } = await supabase
+    .from('inventory')
+    .select('*, menu_item:menu_items(*)')
+    .order('updated_at', { ascending: false })
+  if (error) throw error
+  return data as unknown as InventoryItem[]
+}
+
+export async function upsertInventoryItem(
+  item: Partial<InventoryItem> & { menu_item_id: string; stock_quantity: number }
+): Promise<InventoryItem> {
+  if (USE_MOCK) {
+    const existing = mockInventory.find(i => i.menu_item_id === item.menu_item_id)
+    if (existing) {
+      existing.stock_quantity = item.stock_quantity
+      existing.updated_at = new Date().toISOString()
+      return { ...existing, menu_item: mockMenuItems.find(m => m.id === existing.menu_item_id) }
+    }
+    const newItem: InventoryItem = {
+      id: `inv-${Date.now()}`,
+      unit: 'unidades',
+      min_stock: 5,
+      cost_price: 0,
+      updated_at: new Date().toISOString(),
+      ...item,
+    }
+    mockInventory.push(newItem)
+    return newItem
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('inventory') as any)
+    .upsert({ ...item, updated_at: new Date().toISOString() })
+    .select()
+    .single()
+  if (error) throw error
+  return data as InventoryItem
 }
