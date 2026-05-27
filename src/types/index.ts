@@ -53,7 +53,9 @@ export type TableLocation = Table['location']
 
 export interface InventoryItem {
   id: string
-  menu_item_id: string
+  menu_item_id: string | null      // null for standalone barcode items
+  product_name: string | null      // name for items not linked to menu
+  barcode: string | null           // EAN-13 / Code-128 / QR
   stock_quantity: number
   unit: 'kg' | 'unidades' | 'litros' | 'porciones' | 'botellas' | 'docenas'
   min_stock: number

@@ -60,6 +60,12 @@
   }
 }
 
+/* Barcode scanner line animation */
+@keyframes scanLine {
+  0%, 100% { top: 4px; }
+  50%       { top: calc(100% - 4px); }
+}
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;

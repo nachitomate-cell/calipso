@@ -147,7 +147,7 @@ export async function getInventory(): Promise<InventoryItem[]> {
   if (USE_MOCK) {
     return mockInventory.map(inv => ({
       ...inv,
-      menu_item: mockMenuItems.find(m => m.id === inv.menu_item_id),
+      menu_item: inv.menu_item_id ? mockMenuItems.find(m => m.id === inv.menu_item_id) : undefined,
     }))
   }
   const { data, error } = await supabase
@@ -156,6 +156,24 @@ export async function getInventory(): Promise<InventoryItem[]> {
     .order('updated_at', { ascending: false })
   if (error) throw error
   return data as unknown as InventoryItem[]
+}
+
+export async function getInventoryByBarcode(barcode: string): Promise<InventoryItem | null> {
+  if (USE_MOCK) {
+    const inv = mockInventory.find(i => i.barcode === barcode)
+    if (!inv) return null
+    return {
+      ...inv,
+      menu_item: inv.menu_item_id ? mockMenuItems.find(m => m.id === inv.menu_item_id) : undefined,
+    }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('inventory') as any)
+    .select('*, menu_item:menu_items(*)')
+    .eq('barcode', barcode)
+    .maybeSingle()
+  if (error) throw error
+  return data as InventoryItem | null
 }
 
 // ── Orders ────────────────────────────────────────────────────────────────────
@@ -377,12 +395,15 @@ export function computeNotifications(
       })
     })
 
+  const invName = (i: InventoryItem) =>
+    i.menu_item?.name ?? i.product_name ?? (i.barcode ? `Cód. ${i.barcode}` : i.id)
+
   // Stock out
   inventory.filter(i => i.stock_quantity === 0).forEach(i => {
     notes.push({
       id: `stock-out-${i.id}`, type: 'stock_out', read: false,
       title: 'Sin stock',
-      body: `${i.menu_item?.name ?? i.menu_item_id} — agotado`,
+      body: `${invName(i)} — agotado`,
       link: '/admin/inventario',
       created_at: i.updated_at,
     })
@@ -393,7 +414,7 @@ export function computeNotifications(
     notes.push({
       id: `stock-low-${i.id}`, type: 'stock_low', read: false,
       title: 'Stock bajo',
-      body: `${i.menu_item?.name ?? i.menu_item_id} — ${i.stock_quantity} ${i.unit} (mín. ${i.min_stock})`,
+      body: `${invName(i)} — ${i.stock_quantity} ${i.unit} (mín. ${i.min_stock})`,
       link: '/admin/inventario',
       created_at: i.updated_at,
     })
@@ -403,17 +424,27 @@ export function computeNotifications(
 }
 
 export async function upsertInventoryItem(
-  item: Partial<InventoryItem> & { menu_item_id: string; stock_quantity: number }
+  item: Partial<InventoryItem> & { stock_quantity: number }
 ): Promise<InventoryItem> {
   if (USE_MOCK) {
-    const existing = mockInventory.find(i => i.menu_item_id === item.menu_item_id)
+    // Find by id first, then by menu_item_id
+    const existing = item.id
+      ? mockInventory.find(i => i.id === item.id)
+      : item.menu_item_id
+        ? mockInventory.find(i => i.menu_item_id === item.menu_item_id)
+        : null
     if (existing) {
-      existing.stock_quantity = item.stock_quantity
-      existing.updated_at = new Date().toISOString()
-      return { ...existing, menu_item: mockMenuItems.find(m => m.id === existing.menu_item_id) }
+      Object.assign(existing, item, { updated_at: new Date().toISOString() })
+      return {
+        ...existing,
+        menu_item: existing.menu_item_id ? mockMenuItems.find(m => m.id === existing.menu_item_id) : undefined,
+      }
     }
     const newItem: InventoryItem = {
       id: `inv-${Date.now()}`,
+      menu_item_id: null,
+      product_name: null,
+      barcode: null,
       unit: 'unidades',
       min_stock: 5,
       cost_price: 0,
@@ -421,7 +452,7 @@ export async function upsertInventoryItem(
       ...item,
     }
     mockInventory.push(newItem)
-    return newItem
+    return { ...newItem, menu_item: newItem.menu_item_id ? mockMenuItems.find(m => m.id === newItem.menu_item_id) : undefined }
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('inventory') as any)
