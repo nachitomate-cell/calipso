@@ -7,6 +7,8 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    /* Evita rebote en iOS al hacer scroll */
+    overscroll-behavior: none;
   }
 
   body {
@@ -14,10 +16,29 @@
     color: #1C2B2D;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Evita selección accidental al tocar */
+    -webkit-tap-highlight-color: transparent;
+    /* Scroll momentum en iOS */
+    -webkit-overflow-scrolling: touch;
   }
 
   h1, h2, h3 {
     font-family: 'Playfair Display', Georgia, serif;
+  }
+
+  /*
+   * iOS auto-zoom prevention: cuando un <input> tiene font-size < 16px
+   * Safari hace zoom automático. Esta regla lo previene globalmente.
+   */
+  input, textarea, select {
+    font-size: 16px;
+  }
+
+  /*
+   * Mejora la respuesta táctil — elimina el delay de 300ms en botones y links
+   */
+  a, button, [role="button"] {
+    touch-action: manipulation;
   }
 }
 
@@ -50,5 +71,17 @@
 
   .font-display {
     font-family: 'Playfair Display', Georgia, serif;
+  }
+
+  /* Safe area insets para teléfonos con notch / Dynamic Island */
+  .pt-safe  { padding-top:    env(safe-area-inset-top);    }
+  .pb-safe  { padding-bottom: env(safe-area-inset-bottom); }
+  .pl-safe  { padding-left:   env(safe-area-inset-left);   }
+  .pr-safe  { padding-right:  env(safe-area-inset-right);  }
+
+  /* Área de toque mínima 44×44 px (Apple HIG) */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
   }
 }

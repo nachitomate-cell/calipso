@@ -40,6 +40,15 @@ const navGroups = [
 // Flat list for active detection
 const navItems = navGroups.flatMap(g => g.items)
 
+// Mobile bottom navigation — los 5 accesos más usados
+const mobileNav = [
+  { to: '/admin',          label: 'Inicio',    icon: LayoutDashboard, exact: true },
+  { to: '/admin/comandas', label: 'Comandas',  icon: ClipboardList },
+  { to: '/admin/reservas', label: 'Reservas',  icon: CalendarDays },
+  { to: '/admin/chat',     label: 'Chat',      icon: MessageCircle },
+  { to: '/admin/mesas',    label: 'Mesas',     icon: Table2 },
+]
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
@@ -181,8 +190,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+        {/* Spacer so content doesn't hide behind mobile bottom nav */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8">{children}</main>
       </div>
+
+      {/* ── Mobile bottom navigation ─────────────────────────── */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-calipso-100 flex" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        {mobileNav.map(({ to, label, icon: Icon, exact }) => {
+          const active = exact ? pathname === to : pathname.startsWith(to)
+          const isChat  = to === '/admin/chat'
+          const badge   = isChat ? chatUnread : 0
+          return (
+            <Link
+              key={to}
+              to={to}
+              className={clsx(
+                'flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-semibold transition-colors relative',
+                active ? 'text-calipso' : 'text-ink-secondary'
+              )}
+            >
+              <span className="relative">
+                <Icon size={22} />
+                {badge > 0 && (
+                  <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 bg-coral text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                    {badge > 9 ? '9+' : badge}
+                  </span>
+                )}
+              </span>
+              <span>{label}</span>
+              {active && (
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-calipso rounded-full" />
+              )}
+            </Link>
+          )
+        })}
+      </nav>
     </div>
   )
 }
