@@ -279,6 +279,28 @@ export async function updateOrderItemStatus(itemId: string, status: OrderItem['s
   if (error) throw error
 }
 
+export async function updateOrderItemQty(itemId: string, quantity: number): Promise<void> {
+  if (USE_MOCK) {
+    const item = mockOrderItems.find(i => i.id === itemId)
+    if (item) { item.quantity = quantity; updateOrderTotal(item.order_id) }
+    return
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from('order_items') as any).update({ quantity }).eq('id', itemId)
+  if (error) throw error
+}
+
+export async function updateOrderNotes(orderId: string, notes: string): Promise<void> {
+  if (USE_MOCK) {
+    const order = mockOrders.find(o => o.id === orderId)
+    if (order) { order.notes = notes; order.updated_at = new Date().toISOString() }
+    return
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from('orders') as any).update({ notes }).eq('id', orderId)
+  if (error) throw error
+}
+
 export async function sendOrderToKitchen(orderId: string): Promise<void> {
   if (USE_MOCK) {
     mockOrderItems
