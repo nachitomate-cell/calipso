@@ -12,7 +12,7 @@ import {
   Clock, ChefHat, CheckCircle2, Truck, AlertCircle,
   RefreshCw, ExternalLink, Pencil, Ban, History,
   TableProperties, Banknote, Smartphone, Receipt, ArrowRight,
-  ChevronDown, ChevronUp, Minus,
+  ChevronDown, ChevronUp, Minus, BarChart2, TrendingUp,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import clsx from 'clsx'
@@ -874,6 +874,206 @@ function OrderHistoryView({ orders }: { orders: Order[] }) {
   )
 }
 
+// ── DishRegistry ─────────────────────────────────────────────────────────────
+
+type DishStat = {
+  id: string
+  name: string
+  category: string
+  qty: number
+  orders: number
+  revenue: number
+}
+
+function DishRegistry({ orders }: { orders: Order[] }) {
+  const [period, setPeriod] = useState<'hoy' | 'todo'>('hoy')
+  const [sortBy, setSortBy]  = useState<'qty' | 'revenue'>('qty')
+
+  const today = todayStr()
+
+  const relevant = (
+    period === 'hoy'
+      ? orders.filter(o => o.created_at.startsWith(today) || o.updated_at?.startsWith(today))
+      : orders
+  ).filter(o => o.status !== 'cancelled')
+
+  const statsMap = new Map<string, DishStat>()
+  for (const order of relevant) {
+    for (const item of (order.items ?? [])) {
+      const key  = item.menu_item_id
+      const prev = statsMap.get(key)
+      statsMap.set(key, {
+        id:       key,
+        name:     item.menu_item?.name ?? key,
+        category: (item.menu_item as any)?.category?.name ?? '—',
+        qty:     (prev?.qty     ?? 0) + item.quantity,
+        orders:  (prev?.orders  ?? 0) + 1,
+        revenue: (prev?.revenue ?? 0) + item.unit_price * item.quantity,
+      })
+    }
+  }
+
+  const stats = [...statsMap.values()].sort((a, b) =>
+    sortBy === 'qty' ? b.qty - a.qty : b.revenue - a.revenue
+  )
+  const maxVal      = sortBy === 'qty' ? (stats[0]?.qty ?? 1) : (stats[0]?.revenue ?? 1)
+  const totalQty    = stats.reduce((s, d) => s + d.qty,     0)
+  const totalRev    = stats.reduce((s, d) => s + d.revenue, 0)
+  const totalOrders = stats.reduce((s, d) => s + d.orders,  0)
+
+  return (
+    <div className="space-y-4">
+
+      {/* Controls */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        {/* Period */}
+        <div className="flex rounded-input border border-calipso-100 overflow-hidden">
+          {(['hoy', 'todo'] as const).map(p => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={clsx(
+                'px-4 py-2 text-xs font-semibold transition-colors',
+                period === p ? 'bg-calipso text-white' : 'text-ink-secondary hover:bg-calipso-50'
+              )}
+            >
+              {p === 'hoy' ? 'Hoy' : 'Todo el período'}
+            </button>
+          ))}
+        </div>
+
+        {/* Sort */}
+        <div className="flex rounded-input border border-calipso-100 overflow-hidden">
+          {(['qty', 'revenue'] as const).map(s => (
+            <button
+              key={s}
+              onClick={() => setSortBy(s)}
+              className={clsx(
+                'px-4 py-2 text-xs font-semibold transition-colors',
+                sortBy === s ? 'bg-calipso text-white' : 'text-ink-secondary hover:bg-calipso-50'
+              )}
+            >
+              {s === 'qty' ? 'Por cantidad' : 'Por ingresos'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Platos vendidos',  value: totalQty,            cls: 'text-ink' },
+          { label: 'Líneas de pedido', value: totalOrders,         cls: 'text-calipso' },
+          { label: 'Ingreso total',    value: fmtCLP(totalRev),    cls: 'text-[#3B6D11]' },
+        ].map(({ label, value, cls }) => (
+          <div key={label} className="bg-white rounded-card p-4 shadow-brand text-center">
+            <p className={clsx('text-xl font-bold tabular-nums', cls)}>{value}</p>
+            <p className="text-xs text-ink-secondary mt-1">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Table */}
+      {stats.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <BarChart2 size={40} className="text-calipso/30 mb-4" />
+          <p className="font-display italic text-lg text-ink">Sin datos para el período</p>
+          <p className="text-sm text-ink-secondary mt-1">
+            Los platos pedidos aparecerán aquí una vez que haya comandas.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-card shadow-brand overflow-hidden">
+          {/* Header */}
+          <div className="grid grid-cols-[2.5rem_1fr_5.5rem_5.5rem_7rem] gap-2 px-5 py-2.5 bg-calipso-50 border-b border-calipso-100">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-secondary">#</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-secondary">Plato</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-secondary text-right">Unidades</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-secondary text-right">Pedidos</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-secondary text-right">Ingresos</span>
+          </div>
+
+          {stats.map((dish, idx) => {
+            const barPct = Math.round(
+              (sortBy === 'qty' ? dish.qty : dish.revenue) / maxVal * 100
+            )
+            const rankColor =
+              idx === 0 ? 'text-amber-500' :
+              idx === 1 ? 'text-zinc-400'  :
+              idx === 2 ? 'text-orange-400' :
+              'text-ink/20'
+            const isTop = idx < 3
+
+            return (
+              <div key={dish.id} className={clsx(
+                'border-b border-calipso-50 last:border-0',
+                isTop && 'bg-calipso-50/30'
+              )}>
+                <div className="grid grid-cols-[2.5rem_1fr_5.5rem_5.5rem_7rem] gap-2 items-center px-5 py-3">
+                  {/* Rank */}
+                  <span className={clsx('text-sm font-bold tabular-nums', rankColor)}>
+                    {idx + 1}
+                  </span>
+
+                  {/* Name + category + bar */}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-semibold text-ink truncate">{dish.name}</p>
+                      {idx === 0 && (
+                        <TrendingUp size={12} className="text-amber-500 flex-shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-xs text-ink-secondary">{dish.category}</p>
+                    <div className="mt-1.5 h-1.5 bg-calipso-100 rounded-full overflow-hidden">
+                      <div
+                        className={clsx(
+                          'h-full rounded-full transition-all duration-500',
+                          idx === 0 ? 'bg-amber-400' : idx < 3 ? 'bg-calipso' : 'bg-calipso/50'
+                        )}
+                        style={{ width: `${barPct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Qty */}
+                  <span className={clsx(
+                    'text-sm font-bold tabular-nums text-right',
+                    sortBy === 'qty' ? 'text-ink' : 'text-ink-secondary'
+                  )}>
+                    {dish.qty}
+                  </span>
+
+                  {/* Orders */}
+                  <span className="text-sm text-ink-secondary tabular-nums text-right">
+                    {dish.orders}
+                  </span>
+
+                  {/* Revenue */}
+                  <span className={clsx(
+                    'text-sm font-semibold tabular-nums text-right',
+                    sortBy === 'revenue' ? 'text-[#3B6D11]' : 'text-ink-secondary'
+                  )}>
+                    {fmtCLP(dish.revenue)}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Footer total */}
+          <div className="grid grid-cols-[2.5rem_1fr_5.5rem_5.5rem_7rem] gap-2 items-center px-5 py-3 bg-calipso-50 border-t border-calipso-100">
+            <span />
+            <span className="text-xs font-bold text-ink uppercase tracking-wide">Total</span>
+            <span className="text-sm font-bold text-ink tabular-nums text-right">{totalQty}</span>
+            <span className="text-sm font-bold text-ink-secondary tabular-nums text-right">{totalOrders}</span>
+            <span className="text-sm font-bold text-[#3B6D11] tabular-nums text-right">{fmtCLP(totalRev)}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function Orders() {
@@ -882,7 +1082,7 @@ export default function Orders() {
   const [allOrders,      setAllOrders]      = useState<Order[]>([])
   const [menuItems,      setMenuItems]      = useState<MenuItem[]>([])
   const [selectedTable,  setSelectedTable]  = useState<string | null>(null)
-  const [view,           setView]           = useState<'mesas' | 'historial'>('mesas')
+  const [view,           setView]           = useState<'mesas' | 'historial' | 'registro'>('mesas')
   const [loading,        setLoading]        = useState(true)
   const [countdown,      setCountdown]      = useState(30)
   const countRef = useRef(30)
@@ -978,12 +1178,13 @@ export default function Orders() {
       {/* ── View tabs ────────────────────────────────────────── */}
       <div className="flex gap-1 mb-4 border-b border-calipso-100 flex-shrink-0">
         {[
-          { id: 'mesas',     label: 'Mesas',    Icon: TableProperties },
-          { id: 'historial', label: 'Historial del día', Icon: History },
+          { id: 'mesas',     label: 'Mesas',              Icon: TableProperties },
+          { id: 'historial', label: 'Historial del día',   Icon: History },
+          { id: 'registro',  label: 'Registro de platos',  Icon: BarChart2 },
         ].map(({ id, label, Icon }) => (
           <button
             key={id}
-            onClick={() => setView(id as 'mesas' | 'historial')}
+            onClick={() => setView(id as 'mesas' | 'historial' | 'registro')}
             className={clsx(
               'flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors',
               view === id
@@ -1000,6 +1201,10 @@ export default function Orders() {
       {view === 'historial' ? (
         <div className="flex-1 overflow-y-auto">
           <OrderHistoryView orders={allOrders} />
+        </div>
+      ) : view === 'registro' ? (
+        <div className="flex-1 overflow-y-auto">
+          <DishRegistry orders={allOrders} />
         </div>
       ) : (
         <div className="flex gap-4 flex-1 min-h-0">
