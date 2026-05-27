@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { getAllMenuItems, getTables, getReservations, getInventory } from '../../lib/api'
+import { getAllMenuItems, getTables, getReservations, getInventory, getActiveOrders } from '../../lib/api'
 import { PageLoader } from '../../components/ui/LoadingSpinner'
 import {
   UtensilsCrossed, Table2, CalendarDays, AlertCircle,
   TrendingUp, TrendingDown, Minus, Users, Clock,
   CheckCircle2, XCircle, Package, ArrowRight, ChevronRight,
+  ChefHat, Truck, ExternalLink, RefreshCw, Circle,
 } from 'lucide-react'
-import type { Reservation, InventoryItem } from '../../types'
+import type { Reservation, InventoryItem, Order } from '../../types'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -295,25 +296,222 @@ function RecentReservations({ reservations }: { reservations: Reservation[] }) {
   )
 }
 
+// ── Live orders preview ───────────────────────────────────────────────────────
+
+function elapsedMin(iso: string) {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+}
+
+function elapsedLabel(iso: string) {
+  const m = elapsedMin(iso)
+  if (m < 60) return `${m} min`
+  return `${Math.floor(m / 60)}h ${m % 60}m`
+}
+
+function urgencyColor(iso: string): { border: string; bg: string; badge: string } {
+  const m = elapsedMin(iso)
+  if (m > 40) return { border: '#E8593C', bg: 'rgba(232,89,60,0.04)', badge: 'bg-coral-light text-coral-dark' }
+  if (m > 20) return { border: '#D97706', bg: 'rgba(217,119,6,0.04)',  badge: 'bg-amber-50 text-amber-700' }
+  return       { border: '#29B5D0', bg: 'rgba(41,181,208,0.04)',        badge: 'bg-calipso-50 text-calipso' }
+}
+
+const ORDER_STATUS: Record<Order['status'], { label: string; dot: string }> = {
+  open:       { label: 'Tomando pedido', dot: 'bg-ink/25' },
+  in_kitchen: { label: 'En cocina',      dot: 'bg-amber-500' },
+  ready:      { label: 'Listo',          dot: 'bg-[#3B6D11]' },
+  paid:       { label: 'Cobrado',        dot: 'bg-ink/20' },
+  cancelled:  { label: 'Cancelado',      dot: 'bg-coral' },
+}
+
+const ITEM_ICON: Record<string, { icon: React.ElementType; cls: string }> = {
+  pending:    { icon: Clock,         cls: 'text-ink/35' },
+  in_kitchen: { icon: ChefHat,      cls: 'text-amber-500' },
+  ready:      { icon: CheckCircle2, cls: 'text-[#3B6D11]' },
+  delivered:  { icon: Truck,        cls: 'text-ink/20' },
+}
+
+function OrderCard({ order }: { order: Order }) {
+  const urg    = urgencyColor(order.created_at)
+  const status = ORDER_STATUS[order.status]
+  const items  = order.items ?? []
+  const mins   = elapsedMin(order.created_at)
+
+  return (
+    <div
+      className="flex-shrink-0 w-64 bg-white rounded-card shadow-brand flex flex-col overflow-hidden"
+      style={{ borderTop: `3px solid ${urg.border}`, background: urg.bg }}
+    >
+      {/* Card header */}
+      <div className="px-4 pt-4 pb-3 border-b border-calipso-100">
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <span className="text-2xl font-bold text-ink tabular-nums leading-none">
+            Mesa {order.table?.number ?? '—'}
+          </span>
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5 ${status.dot === 'bg-amber-500' ? 'bg-amber-50 text-amber-700' : status.dot === 'bg-[#3B6D11]' ? 'bg-[#D4EDDA] text-[#3B6D11]' : 'bg-calipso-50 text-calipso'}`}>
+            {status.label}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className={`text-sm font-semibold tabular-nums ${mins > 40 ? 'text-coral' : mins > 20 ? 'text-amber-600' : 'text-ink-secondary'}`}>
+            ⏱ {elapsedLabel(order.created_at)}
+          </span>
+          <span className="text-sm font-bold text-ink tabular-nums">
+            ${order.total.toLocaleString('es-CL')}
+          </span>
+        </div>
+      </div>
+
+      {/* Items list */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 max-h-52">
+        {items.length === 0 && (
+          <p className="text-sm text-ink-secondary italic text-center py-4">Comanda vacía</p>
+        )}
+        {items.map(item => {
+          const cfg  = ITEM_ICON[item.status] ?? ITEM_ICON.pending
+          const Icon = cfg.icon
+          const delivered = item.status === 'delivered'
+          return (
+            <div
+              key={item.id}
+              className={`flex items-start gap-2.5 ${delivered ? 'opacity-35' : ''}`}
+            >
+              <Icon size={14} className={`${cfg.cls} flex-shrink-0 mt-0.5`} />
+              <span className={`text-sm leading-snug flex-1 min-w-0 ${delivered ? 'line-through text-ink-secondary' : 'text-ink'}`}>
+                {item.menu_item?.name ?? '—'}
+                <span className="font-bold text-ink-secondary"> ×{item.quantity}</span>
+              </span>
+              <span className="text-xs text-ink-secondary tabular-nums flex-shrink-0 pt-0.5">
+                ${(item.unit_price * item.quantity).toLocaleString('es-CL')}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Footer link */}
+      <div className="px-4 py-2.5 border-t border-calipso-100 bg-white">
+        <Link
+          to="/admin/comandas"
+          className="text-xs text-calipso hover:underline flex items-center gap-1 font-medium"
+        >
+          Abrir comanda <ExternalLink size={10} />
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+function LiveOrdersPreview({ orders, onRefresh, lastRefreshed }: {
+  orders: Order[]
+  onRefresh: () => void
+  lastRefreshed: Date
+}) {
+  const active = orders.filter(o => o.status !== 'paid' && o.status !== 'cancelled')
+  const inKitchen = active.filter(o => o.status === 'in_kitchen' || o.status === 'ready').length
+
+  return (
+    <div className="bg-white rounded-card shadow-brand overflow-hidden">
+      {/* Section header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-calipso-100">
+        <div>
+          <h2 className="font-display text-xl text-ink font-semibold italic">Comandas activas</h2>
+          <p className="text-sm text-ink-secondary mt-0.5">
+            {active.length} mesa{active.length !== 1 ? 's' : ''} en servicio
+            {inKitchen > 0 && <span className="ml-2 text-amber-600 font-medium">· {inKitchen} en cocina</span>}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-ink/30">
+            {lastRefreshed.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+          <button
+            onClick={onRefresh}
+            className="p-1.5 text-ink-secondary hover:text-calipso transition-colors rounded-input hover:bg-calipso-50"
+            title="Actualizar"
+          >
+            <RefreshCw size={14} />
+          </button>
+          <Link
+            to="/admin/comandas"
+            className="flex items-center gap-1.5 text-sm text-calipso hover:underline font-medium"
+          >
+            Ver todas <ChevronRight size={14} />
+          </Link>
+        </div>
+      </div>
+
+      {/* Cards row */}
+      {active.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center px-6">
+          <div className="w-12 h-12 rounded-full bg-calipso-50 flex items-center justify-center mb-3">
+            <UtensilsCrossed size={22} className="text-calipso" />
+          </div>
+          <p className="text-base font-semibold text-ink">Sin mesas activas</p>
+          <p className="text-sm text-ink-secondary mt-1">Las comandas abiertas aparecerán aquí en tiempo real.</p>
+        </div>
+      ) : (
+        <div className="p-4">
+          {/* Urgency legend */}
+          <div className="flex items-center gap-4 mb-3">
+            {[
+              { color: '#29B5D0', label: 'Normal (< 20 min)' },
+              { color: '#D97706', label: 'Atención (20–40 min)' },
+              { color: '#E8593C', label: 'Urgente (> 40 min)' },
+            ].map(({ color, label }) => (
+              <span key={label} className="flex items-center gap-1.5 text-xs text-ink-secondary">
+                <Circle size={8} fill={color} stroke="none" />
+                {label}
+              </span>
+            ))}
+          </div>
+
+          {/* Horizontal scrollable row */}
+          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'thin' }}>
+            {active
+              .sort((a, b) => elapsedMin(b.created_at) - elapsedMin(a.created_at)) // más urgente primero
+              .map(order => <OrderCard key={order.id} order={order} />)
+            }
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [loading,      setLoading]      = useState(true)
-  const [reservations, setReservations] = useState<Reservation[]>([])
-  const [inventory,    setInventory]    = useState<InventoryItem[]>([])
-  const [menuCount,    setMenuCount]    = useState(0)
-  const [tableCount,   setTableCount]   = useState(0)
+  const [loading,        setLoading]        = useState(true)
+  const [reservations,   setReservations]   = useState<Reservation[]>([])
+  const [inventory,      setInventory]      = useState<InventoryItem[]>([])
+  const [orders,         setOrders]         = useState<Order[]>([])
+  const [menuCount,      setMenuCount]      = useState(0)
+  const [tableCount,     setTableCount]     = useState(0)
+  const [lastRefreshed,  setLastRefreshed]  = useState(new Date())
+  const ordersTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const loadOrders = async () => {
+    const o = await getActiveOrders()
+    setOrders(o)
+    setLastRefreshed(new Date())
+  }
 
   useEffect(() => {
-    Promise.all([getAllMenuItems(), getTables(), getReservations(), getInventory()])
-      .then(([items, tables, resos, inv]) => {
+    Promise.all([getAllMenuItems(), getTables(), getReservations(), getInventory(), getActiveOrders()])
+      .then(([items, tables, resos, inv, activeOrders]) => {
         setMenuCount(items.filter(i => i.is_available).length)
         setTableCount(tables.filter(t => t.is_active).length)
         setReservations(resos)
         setInventory(inv)
+        setOrders(activeOrders)
+        setLastRefreshed(new Date())
       })
       .finally(() => setLoading(false))
-  }, [])
+
+    // Auto-refresh orders every 30s
+    ordersTimerRef.current = setInterval(loadOrders, 30000)
+    return () => { if (ordersTimerRef.current) clearInterval(ordersTimerRef.current) }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <PageLoader />
 
@@ -432,6 +630,13 @@ export default function Dashboard() {
         </div>
         <StatusBreakdown reservations={reservations} />
       </div>
+
+      {/* ── Live orders ─────────────────────────────────────── */}
+      <LiveOrdersPreview
+        orders={orders}
+        onRefresh={loadOrders}
+        lastRefreshed={lastRefreshed}
+      />
 
       {/* ── Bottom row ──────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
