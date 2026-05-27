@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   getActiveOrders, getAllOrders, getTables, getAllMenuItems, getWaiters,
   createOrder, addOrderItem, removeOrderItem,
@@ -8,11 +8,11 @@ import {
 import { PageLoader } from '../../components/ui/LoadingSpinner'
 import type { Order, OrderItem, Table, MenuItem, Waiter } from '../../types'
 import {
-  UtensilsCrossed, Plus, Send, CreditCard, X, Search,
+  UtensilsCrossed, Plus, Send, CreditCard, X,
   Clock, ChefHat, CheckCircle2, Truck, AlertCircle,
   RefreshCw, ExternalLink, Pencil, Ban, History,
   TableProperties, Banknote, Smartphone, Receipt, ArrowRight,
-  ChevronDown, ChevronUp, Minus, BarChart2, TrendingUp, User2,
+  ChevronDown, ChevronUp, Minus, BarChart2, TrendingUp, User2, Star, Zap,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import clsx from 'clsx'
@@ -194,8 +194,8 @@ ${noteHTML}
 
 // ── TableCard ─────────────────────────────────────────────────────────────────
 
-function TableCard({ table, order, selected, onClick }: {
-  table: Table; order?: Order; selected: boolean; onClick: () => void
+function TableCard({ table, order, selected, onClick, onQuickSend }: {
+  table: Table; order?: Order; selected: boolean; onClick: () => void; onQuickSend?: () => void
 }) {
   const urg = order ? urgency(order.created_at) : 'ok'
   const borderColor = !order ? '#3B6D11'
@@ -267,7 +267,19 @@ function TableCard({ table, order, selected, onClick }: {
               )}
             </div>
           )}
-          <p className="text-sm font-bold text-ink tabular-nums mt-1.5">{fmtCLP(order.total)}</p>
+          <div className="flex items-center justify-between mt-1.5">
+            <p className="text-sm font-bold text-ink tabular-nums">{fmtCLP(order.total)}</p>
+            {/* Quick-send button */}
+            {pendingCount > 0 && onQuickSend && (
+              <button
+                onClick={e => { e.stopPropagation(); onQuickSend() }}
+                className="flex items-center gap-1 text-[9px] bg-amber-500 text-white font-bold px-2 py-1 rounded-full hover:bg-amber-600 transition-colors"
+                title="Enviar pendientes a cocina"
+              >
+                <Zap size={9} /> Cocina
+              </button>
+            )}
+          </div>
         </>
       ) : (
         <span className="text-xs font-semibold text-[#3B6D11]">Libre</span>
@@ -276,159 +288,188 @@ function TableCard({ table, order, selected, onClick }: {
   )
 }
 
-// ── AddItemModal ──────────────────────────────────────────────────────────────
+// ── POSGrid ───────────────────────────────────────────────────────────────────
+// Selector táctil estilo terminal POS — reemplaza el modal de lista
 
-function AddItemModal({ menuItems, onAdd, onClose }: {
+type CartEntry = { qty: number; notes: string }
+
+function POSGrid({ menuItems, frequentIds, onAdd, onClose }: {
   menuItems: MenuItem[]
-  onAdd: (itemId: string, qty: number, notes: string) => Promise<void>
+  frequentIds: string[]
+  onAdd: (items: { itemId: string; qty: number; notes: string }[]) => Promise<void>
   onClose: () => void
 }) {
-  const [search,  setSearch]  = useState('')
-  const [pending, setPending] = useState<Record<string, { qty: number; notes: string }>>({})
-  const [showNotes, setShowNotes] = useState<Record<string, boolean>>({})
-  const [saving,  setSaving]  = useState(false)
-
   const available = menuItems.filter(i => i.is_available)
-  const filtered  = available.filter(i =>
-    !search || i.name.toLowerCase().includes(search.toLowerCase()) ||
-    i.category?.name.toLowerCase().includes(search.toLowerCase())
-  )
-  const totalSelected = Object.values(pending).reduce((s, v) => s + v.qty, 0)
+  const categories = Array.from(new Set(available.map(i => i.category?.name ?? 'Otros')))
+  const hasFav = frequentIds.length > 0
+  const TABS = hasFav ? ['⭐ Frecuentes', ...categories] : categories
 
-  const setQty = (id: string, qty: number) =>
-    setPending(p => ({ ...p, [id]: { qty, notes: p[id]?.notes ?? '' } }))
+  const [activeTab, setActiveTab] = useState(TABS[0] ?? '')
+  const [cart,      setCart]      = useState<Map<string, CartEntry>>(new Map())
+  const [noteFor,   setNoteFor]   = useState<string | null>(null)
+  const [saving,    setSaving]    = useState(false)
 
-  const setNotes = (id: string, notes: string) =>
-    setPending(p => ({ ...p, [id]: { qty: p[id]?.qty ?? 0, notes } }))
+  const tabItems: MenuItem[] = activeTab === '⭐ Frecuentes'
+    ? frequentIds.map(id => available.find(i => i.id === id)).filter(Boolean) as MenuItem[]
+    : available.filter(i => (i.category?.name ?? 'Otros') === activeTab)
 
-  const handleAdd = async () => {
+  const totalQty   = Array.from(cart.values()).reduce((s, v) => s + v.qty, 0)
+  const totalPrice = Array.from(cart.entries()).reduce((s, [id, { qty }]) => {
+    return s + (available.find(i => i.id === id)?.price ?? 0) * qty
+  }, 0)
+
+  const inc = (id: string) =>
+    setCart(c => { const m = new Map(c); const p = m.get(id); m.set(id, { qty: (p?.qty ?? 0) + 1, notes: p?.notes ?? '' }); return m })
+  const dec = (id: string) =>
+    setCart(c => { const m = new Map(c); const p = m.get(id); if (!p || p.qty <= 1) m.delete(id); else m.set(id, { ...p, qty: p.qty - 1 }); return m })
+  const setNote = (id: string, notes: string) =>
+    setCart(c => { const m = new Map(c); const p = m.get(id); if (p) m.set(id, { ...p, notes }); return m })
+
+  const handleConfirm = async () => {
     setSaving(true)
     try {
-      for (const [id, { qty, notes }] of Object.entries(pending)) {
-        if (qty > 0) await onAdd(id, qty, notes)
-      }
+      const items = [...cart.entries()].filter(([, v]) => v.qty > 0).map(([itemId, { qty, notes }]) => ({ itemId, qty, notes }))
+      await onAdd(items)
       onClose()
     } finally { setSaving(false) }
   }
 
-  // Group by category
-  const categories = Array.from(new Set(filtered.map(i => i.category?.name ?? 'Otros')))
-
   return (
-    <div className="fixed inset-0 bg-ink/60 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-card shadow-brand-lg w-full max-w-lg max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-
+    <div className="fixed inset-0 bg-ink/70 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+      <div
+        className="bg-white rounded-t-2xl sm:rounded-card shadow-brand-lg w-full max-w-lg flex flex-col"
+        style={{ height: '90dvh' }}
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-calipso-100">
-          <UtensilsCrossed size={18} className="text-calipso" />
-          <span className="font-display font-semibold text-ink italic text-lg">Agregar platos</span>
-          {totalSelected > 0 && (
-            <span className="ml-auto text-xs bg-calipso text-white font-bold px-2.5 py-1 rounded-full">
-              {totalSelected} ítem{totalSelected > 1 ? 's' : ''}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-calipso-100 flex-shrink-0">
+          <UtensilsCrossed size={17} className="text-calipso flex-shrink-0" />
+          <span className="font-display font-semibold text-ink italic flex-1">Agregar platos</span>
+          {totalQty > 0 && (
+            <span className="bg-calipso text-white text-xs font-bold px-2.5 py-0.5 rounded-full tabular-nums">
+              {totalQty} · {fmtCLP(totalPrice)}
             </span>
           )}
-          <button onClick={onClose} className={clsx('text-ink-secondary hover:text-ink', totalSelected > 0 && 'ml-2')}>
+          <button onClick={onClose} className="text-ink-secondary hover:text-ink p-1 ml-1">
             <X size={20} />
           </button>
         </div>
 
-        {/* Search */}
-        <div className="px-5 py-3 border-b border-calipso-100">
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-secondary" />
-            <input
-              autoFocus
-              type="text"
-              placeholder="Buscar plato o categoría…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 text-sm border border-calipso-100 rounded-input focus:outline-none focus:ring-2 focus:ring-calipso"
-            />
-          </div>
+        {/* Category tabs */}
+        <div className="flex overflow-x-auto scrollbar-hide gap-1.5 px-3 py-2 border-b border-calipso-100 flex-shrink-0">
+          {TABS.map(tab => (
+            <button
+              key={tab}
+              onClick={() => { setActiveTab(tab); setNoteFor(null) }}
+              className={clsx(
+                'flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap flex items-center gap-1',
+                activeTab === tab
+                  ? 'bg-calipso text-white shadow-brand'
+                  : 'bg-calipso-50 text-ink-secondary hover:bg-calipso-100'
+              )}
+            >
+              {tab === '⭐ Frecuentes' && <Star size={10} className="fill-current" />}
+              {tab === '⭐ Frecuentes' ? 'Frecuentes' : tab}
+            </button>
+          ))}
         </div>
 
-        {/* Items list — grouped */}
-        <div className="flex-1 overflow-y-auto">
-          {categories.map(cat => {
-            const catItems = filtered.filter(i => (i.category?.name ?? 'Otros') === cat)
+        {/* Items grid — toque = +1 */}
+        <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 gap-2.5 content-start">
+          {tabItems.map(item => {
+            const entry = cart.get(item.id)
+            const qty   = entry?.qty ?? 0
+            const notes = entry?.notes ?? ''
+            const sel   = qty > 0
+
             return (
-              <div key={cat}>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-ink-secondary px-5 py-2 bg-calipso-50 sticky top-0">
-                  {cat}
-                </p>
-                {catItems.map(item => {
-                  const qty = pending[item.id]?.qty ?? 0
-                  const notes = pending[item.id]?.notes ?? ''
-                  const expanded = showNotes[item.id]
-                  return (
-                    <div key={item.id} className="border-b border-calipso-50 last:border-0">
-                      <div className="flex items-center gap-3 px-5 py-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-ink truncate">{item.name}</p>
-                          <p className="text-xs text-ink-secondary">{fmtCLP(item.price)}</p>
-                        </div>
+              <div key={item.id}>
+                {/* Main tap target */}
+                <button
+                  onClick={() => inc(item.id)}
+                  className={clsx(
+                    'relative w-full rounded-card border-2 p-3 text-left transition-all active:scale-95 flex flex-col justify-between gap-1',
+                    sel
+                      ? 'border-calipso bg-calipso-50 shadow-brand'
+                      : 'border-calipso-100 bg-white hover:border-calipso/40',
+                  )}
+                  style={{ minHeight: 84 }}
+                >
+                  {/* Qty bubble */}
+                  {qty > 0 && (
+                    <span className="absolute -top-2.5 -right-2.5 w-6 h-6 bg-calipso text-white text-xs font-bold rounded-full flex items-center justify-center shadow-brand leading-none">
+                      {qty}
+                    </span>
+                  )}
+                  <p className={clsx('text-sm font-bold leading-tight', sel ? 'text-calipso-700' : 'text-ink')}>
+                    {item.name}
+                  </p>
+                  <p className={clsx('text-sm font-semibold', sel ? 'text-calipso' : 'text-ink-secondary')}>
+                    {fmtCLP(item.price)}
+                  </p>
+                </button>
 
-                        {/* Notes toggle */}
-                        {qty > 0 && (
-                          <button
-                            onClick={() => setShowNotes(s => ({ ...s, [item.id]: !s[item.id] }))}
-                            className="text-ink-secondary hover:text-calipso transition-colors p-1"
-                            title="Agregar nota"
-                          >
-                            <Pencil size={12} />
-                          </button>
-                        )}
-
-                        {/* Qty stepper */}
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <button
-                            onClick={() => setQty(item.id, Math.max(0, qty - 1))}
-                            className="w-7 h-7 rounded-full border border-calipso/30 text-calipso font-bold flex items-center justify-center hover:bg-calipso hover:text-white transition-colors text-base"
-                          >
-                            <Minus size={14} />
-                          </button>
-                          <span className="w-6 text-center text-sm tabular-nums font-bold text-ink">{qty}</span>
-                          <button
-                            onClick={() => setQty(item.id, qty + 1)}
-                            className="w-7 h-7 rounded-full bg-calipso text-white font-bold flex items-center justify-center hover:bg-calipso-700 transition-colors"
-                          >
-                            <Plus size={14} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Notes input (expandable) */}
-                      {qty > 0 && expanded && (
-                        <div className="px-5 pb-3">
-                          <input
-                            type="text"
-                            placeholder="Nota para cocina (sin sal, término medio…)"
-                            value={notes}
-                            onChange={e => setNotes(item.id, e.target.value)}
-                            className="w-full text-sm border border-calipso-100 rounded-input px-3 py-2 focus:outline-none focus:ring-2 focus:ring-calipso text-ink placeholder:text-ink/30"
-                          />
-                        </div>
+                {/* Controls row — visible when selected */}
+                {sel && (
+                  <div className="flex items-center gap-1 mt-1.5 px-0.5">
+                    <button
+                      onClick={() => dec(item.id)}
+                      className="w-7 h-7 rounded-full border border-coral/40 text-coral flex items-center justify-center hover:bg-coral-light transition-colors flex-shrink-0"
+                    >
+                      <Minus size={11} />
+                    </button>
+                    <button
+                      onClick={() => setNoteFor(noteFor === item.id ? null : item.id)}
+                      className={clsx(
+                        'flex-1 text-[10px] rounded px-2 py-1 text-left truncate transition-colors',
+                        notes
+                          ? 'text-amber-700 bg-amber-50 font-medium'
+                          : 'text-ink-secondary hover:bg-calipso-50'
                       )}
-                    </div>
-                  )
-                })}
+                    >
+                      {notes ? `📝 ${notes}` : '+ nota cocina'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Inline note input */}
+                {sel && noteFor === item.id && (
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="sin sal, término medio…"
+                    value={notes}
+                    onChange={e => setNote(item.id, e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') setNoteFor(null) }}
+                    className="mt-1.5 w-full text-xs border border-amber-300 bg-amber-50 rounded-input px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                )}
               </div>
             )
           })}
-          {filtered.length === 0 && (
-            <p className="text-center text-ink-secondary text-sm py-12">Sin resultados para "{search}"</p>
+
+          {tabItems.length === 0 && (
+            <p className="col-span-2 text-center text-ink-secondary text-sm py-12">
+              Sin platos disponibles aquí
+            </p>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-4 border-t border-calipso-100 bg-calipso-50">
+        {/* Footer CTA */}
+        <div className="border-t border-calipso-100 px-4 py-3 flex-shrink-0 bg-calipso-50" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
           <button
-            onClick={handleAdd}
-            disabled={totalSelected === 0 || saving}
-            className="w-full bg-calipso disabled:bg-calipso/40 text-white font-semibold py-3 rounded-input text-sm transition-colors flex items-center justify-center gap-2"
+            onClick={handleConfirm}
+            disabled={totalQty === 0 || saving}
+            className="w-full flex items-center justify-center gap-2 bg-calipso disabled:bg-calipso/40 text-white font-bold py-3.5 rounded-input text-sm transition-colors"
           >
-            {saving ? <RefreshCw size={15} className="animate-spin" /> : <Plus size={15} />}
-            {totalSelected > 0 ? `Agregar ${totalSelected} ítem${totalSelected > 1 ? 's' : ''} a la comanda` : 'Selecciona platos'}
+            {saving
+              ? <RefreshCw size={15} className="animate-spin" />
+              : <Send size={15} />
+            }
+            {totalQty > 0
+              ? `Agregar ${totalQty} ítem${totalQty !== 1 ? 's' : ''} · ${fmtCLP(totalPrice)}`
+              : 'Selecciona platos'
+            }
           </button>
         </div>
       </div>
@@ -552,8 +593,8 @@ function PaymentModal({ order, onConfirm, onClose }: {
 
 // ── OrderPanel ────────────────────────────────────────────────────────────────
 
-function OrderPanel({ table, order, menuItems, waiters, onRefresh }: {
-  table: Table; order?: Order; menuItems: MenuItem[]; waiters: Waiter[]; onRefresh: () => void
+function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }: {
+  table: Table; order?: Order; menuItems: MenuItem[]; waiters: Waiter[]; frequentIds: string[]; onRefresh: () => void
 }) {
   const [showAdd,       setShowAdd]       = useState(false)
   const [showPayment,   setShowPayment]   = useState(false)
@@ -650,8 +691,10 @@ function OrderPanel({ table, order, menuItems, waiters, onRefresh }: {
     ? Math.round((activeItems.filter(i => i.status === 'ready').length / activeItems.length) * 100)
     : 0
 
-  const handleAddItem = async (itemId: string, qty: number, notes: string) => {
-    await addOrderItem(order.id, itemId, qty, notes)
+  const handleAddItems = async (items: { itemId: string; qty: number; notes: string }[]) => {
+    for (const { itemId, qty, notes } of items) {
+      await addOrderItem(order.id, itemId, qty, notes)
+    }
     onRefresh()
   }
 
@@ -962,7 +1005,7 @@ function OrderPanel({ table, order, menuItems, waiters, onRefresh }: {
       </div>
 
       {showAdd && (
-        <AddItemModal menuItems={menuItems} onAdd={handleAddItem} onClose={() => setShowAdd(false)} />
+        <POSGrid menuItems={menuItems} frequentIds={frequentIds} onAdd={handleAddItems} onClose={() => setShowAdd(false)} />
       )}
       {showPayment && (
         <PaymentModal order={order} onConfirm={handlePayment} onClose={() => setShowPayment(false)} />
@@ -1310,6 +1353,35 @@ export default function Orders() {
     return () => clearInterval(t)
   }, [load])
 
+  // Platos más pedidos — para tab Frecuentes en el POSGrid
+  const frequentIds = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const order of allOrders.filter(o => o.status !== 'cancelled')) {
+      for (const item of (order.items ?? [])) {
+        counts.set(item.menu_item_id, (counts.get(item.menu_item_id) ?? 0) + item.quantity)
+      }
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([id]) => id)
+  }, [allOrders])
+
+  // Envío rápido desde la TableCard (sin entrar al panel)
+  const handleQuickSend = useCallback(async (order: Order) => {
+    const pendingItems = (order.items ?? []).filter(i => i.status === 'pending')
+    if (!pendingItems.length || !order.table) return
+    const printWin = window.open('', '_blank', 'width=420,height=620,toolbar=no,menubar=no,location=no,status=no')
+    try {
+      await sendOrderToKitchen(order.id)
+      if (printWin) {
+        printWin.document.write(buildTicketHTML(order, order.table, pendingItems, order.waiter_name ?? undefined))
+        printWin.document.close()
+      }
+      await load()
+    } catch { printWin?.close() }
+  }, [load])
+
   if (loading) return <PageLoader />
 
   const orderByTable   = Object.fromEntries(orders.map(o => [o.table_id, o]))
@@ -1418,6 +1490,7 @@ export default function Orders() {
                         order={orderByTable[t.id]}
                         selected={selectedTable === t.id}
                         onClick={() => setSelectedTable(t.id)}
+                        onQuickSend={orderByTable[t.id] ? () => handleQuickSend(orderByTable[t.id]) : undefined}
                       />
                     ))}
                   </div>
@@ -1434,6 +1507,7 @@ export default function Orders() {
                 order={selOrder}
                 menuItems={menuItems}
                 waiters={waiters}
+                frequentIds={frequentIds}
                 onRefresh={load}
               />
             ) : (
