@@ -2,9 +2,9 @@ import { supabase } from './supabase'
 import {
   mockCategories, mockMenuItems, mockTables, mockReservations,
   mockInventory, mockOrders, mockOrderItems, mockHistoricalOrders,
-  mockChatSessions, mockChatMessages,
+  mockChatSessions, mockChatMessages, mockWaiters,
 } from './mock-data'
-import type { Category, MenuItem, Table, Reservation, InventoryItem, Order, OrderItem, AppNotification, ChatSession, ChatMessage } from '../types'
+import type { Category, MenuItem, Table, Reservation, InventoryItem, Order, OrderItem, AppNotification, ChatSession, ChatMessage, Waiter } from '../types'
 
 const USE_MOCK = !import.meta.env.VITE_SUPABASE_URL
 
@@ -194,11 +194,11 @@ export async function getAllOrders(): Promise<Order[]> {
   return data as unknown as Order[]
 }
 
-export async function createOrder(tableId: string, notes?: string): Promise<Order> {
+export async function createOrder(tableId: string, waiterName?: string, notes?: string): Promise<Order> {
   if (USE_MOCK) {
     const order: Order = {
       id: `ord-${Date.now()}`, table_id: tableId, status: 'open',
-      notes: notes ?? null, total: 0,
+      notes: notes ?? null, waiter_name: waiterName ?? null, total: 0,
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     }
     mockOrders.push(order)
@@ -206,7 +206,7 @@ export async function createOrder(tableId: string, notes?: string): Promise<Orde
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('orders') as any)
-    .insert({ table_id: tableId, notes: notes ?? null, status: 'open', total: 0 })
+    .insert({ table_id: tableId, notes: notes ?? null, waiter_name: waiterName ?? null, status: 'open', total: 0 })
     .select().single()
   if (error) throw error
   return data as Order
@@ -430,6 +430,49 @@ export async function upsertInventoryItem(
     .single()
   if (error) throw error
   return data as InventoryItem
+}
+
+// ── Waiters / Garzones ───────────────────────────────────────────────────────
+
+export async function getWaiters(): Promise<Waiter[]> {
+  if (USE_MOCK) return mockWaiters.filter(w => w.is_active)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('waiters') as any).select('*').eq('is_active', true).order('name')
+  if (error) throw error
+  return data as Waiter[]
+}
+
+export async function getAllWaiters(): Promise<Waiter[]> {
+  if (USE_MOCK) return [...mockWaiters]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('waiters') as any).select('*').order('name')
+  if (error) throw error
+  return data as Waiter[]
+}
+
+export async function upsertWaiter(waiter: Partial<Waiter> & { name: string }): Promise<Waiter> {
+  if (USE_MOCK) {
+    const existing = mockWaiters.find(w => w.id === waiter.id)
+    if (existing) { Object.assign(existing, waiter); return existing }
+    const nw: Waiter = { id: `w-${Date.now()}`, name: waiter.name, is_active: waiter.is_active ?? true, created_at: new Date().toISOString() }
+    mockWaiters.push(nw)
+    return nw
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('waiters') as any).upsert(waiter).select().single()
+  if (error) throw error
+  return data as Waiter
+}
+
+export async function deleteWaiter(id: string): Promise<void> {
+  if (USE_MOCK) {
+    const idx = mockWaiters.findIndex(w => w.id === id)
+    if (idx >= 0) mockWaiters.splice(idx, 1)
+    return
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from('waiters') as any).delete().eq('id', id)
+  if (error) throw error
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import {
   LayoutDashboard, UtensilsCrossed, Table2, CalendarDays,
   Package, LogOut, Menu, X, ChevronRight,
-  ClipboardList, ChefHat, BarChart2, Bell, MessageCircle,
+  ClipboardList, ChefHat, BarChart2, Bell, MessageCircle, Users,
 } from 'lucide-react'
 import Logo from '../ui/Logo'
 import clsx from 'clsx'
@@ -19,6 +19,7 @@ const navGroups = [
       { to: '/admin/reservas',  label: 'Reservas',    icon: CalendarDays },
       { to: '/admin/mesas',     label: 'Mesas',       icon: Table2 },
       { to: '/admin/chat',      label: 'Chat',        icon: MessageCircle },
+      { to: '/admin/garzones',  label: 'Garzones',    icon: Users },
     ],
   },
   {

@@ -80,6 +80,7 @@ export interface Order {
   status: 'open' | 'in_kitchen' | 'ready' | 'paid' | 'cancelled'
   notes: string | null
   total: number
+  waiter_name: string | null
   created_at: string
   updated_at: string
   table?: Table
@@ -104,6 +105,13 @@ export interface ChatSession {
   created_at: string
   updated_at: string
   messages?: ChatMessage[]
+}
+
+export interface Waiter {
+  id: string
+  name: string
+  is_active: boolean
+  created_at: string
 }
 
 export interface AppNotification {

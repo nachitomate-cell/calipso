@@ -1,4 +1,4 @@
-import type { Category, MenuItem, Table, Reservation, InventoryItem, Order, OrderItem, ChatSession, ChatMessage } from '../types'
+import type { Category, MenuItem, Table, Reservation, InventoryItem, Order, OrderItem, ChatSession, ChatMessage, Waiter } from '../types'
 
 // Helper: date offset from today
 function daysFromNow(n: number): string {
@@ -277,6 +277,16 @@ export const mockInventory: InventoryItem[] = [
   { id: 'inv-18', menu_item_id: '18', stock_quantity: 18, unit: 'botellas',  min_stock: 6,  cost_price: 4500,  updated_at: new Date().toISOString() },
 ]
 
+// ── Waiters / Garzones ───────────────────────────────────────────────────────
+
+export const mockWaiters: Waiter[] = [
+  { id: 'w-1', name: 'Oscar Parra',       is_active: true,  created_at: '' },
+  { id: 'w-2', name: 'Patricio Vicencio', is_active: true,  created_at: '' },
+  { id: 'w-3', name: 'Juan Cárdenas',     is_active: true,  created_at: '' },
+  { id: 'w-4', name: 'Jazmín Parra',      is_active: true,  created_at: '' },
+  { id: 'w-5', name: 'Michael Morales',   is_active: true,  created_at: '' },
+]
+
 // ── Active Orders (current service) ──────────────────────────────────────────
 
 export const mockOrderItems: OrderItem[] = [
@@ -302,11 +312,11 @@ export const mockOrderItems: OrderItem[] = [
 ]
 
 export const mockOrders: Order[] = [
-  { id: 'ord-1', table_id: '1', status: 'open',       notes: null,       total: 36700, created_at: new Date(Date.now() - 900000).toISOString(),  updated_at: new Date(Date.now() - 900000).toISOString() },
-  { id: 'ord-2', table_id: '3', status: 'in_kitchen', notes: null,       total: 65600, created_at: new Date(Date.now() - 1800000).toISOString(), updated_at: new Date(Date.now() - 1200000).toISOString() },
-  { id: 'ord-3', table_id: '5', status: 'ready',      notes: 'Mesa VIP', total: 74600, created_at: new Date(Date.now() - 2700000).toISOString(), updated_at: new Date(Date.now() - 600000).toISOString() },
-  { id: 'ord-4', table_id: '7', status: 'in_kitchen', notes: null,       total: 84300, created_at: new Date(Date.now() - 3600000).toISOString(), updated_at: new Date(Date.now() - 1800000).toISOString() },
-  { id: 'ord-5', table_id: '2', status: 'open',       notes: null,       total: 27700, created_at: new Date(Date.now() - 480000).toISOString(),  updated_at: new Date(Date.now() - 480000).toISOString() },
+  { id: 'ord-1', table_id: '1', status: 'open',       notes: null,       waiter_name: 'Oscar Parra',       total: 36700, created_at: new Date(Date.now() - 900000).toISOString(),  updated_at: new Date(Date.now() - 900000).toISOString() },
+  { id: 'ord-2', table_id: '3', status: 'in_kitchen', notes: null,       waiter_name: 'Patricio Vicencio', total: 65600, created_at: new Date(Date.now() - 1800000).toISOString(), updated_at: new Date(Date.now() - 1200000).toISOString() },
+  { id: 'ord-3', table_id: '5', status: 'ready',      notes: 'Mesa VIP', waiter_name: 'Jazmín Parra',     total: 74600, created_at: new Date(Date.now() - 2700000).toISOString(), updated_at: new Date(Date.now() - 600000).toISOString() },
+  { id: 'ord-4', table_id: '7', status: 'in_kitchen', notes: null,       waiter_name: 'Juan Cárdenas',    total: 84300, created_at: new Date(Date.now() - 3600000).toISOString(), updated_at: new Date(Date.now() - 1800000).toISOString() },
+  { id: 'ord-5', table_id: '2', status: 'open',       notes: null,       waiter_name: 'Michael Morales',  total: 27700, created_at: new Date(Date.now() - 480000).toISOString(),  updated_at: new Date(Date.now() - 480000).toISOString() },
 ]
 
 // ── Historical paid orders (last 30 days, for reports) ────────────────────────
@@ -337,6 +347,7 @@ function buildHistoricalOrders(): Order[] {
       table_id: tableId,
       status: 'paid',
       notes: null,
+      waiter_name: mockWaiters[i % mockWaiters.length]?.name ?? null,
       total,
       created_at: d.toISOString(),
       updated_at: d.toISOString(),

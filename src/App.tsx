@@ -17,6 +17,7 @@ import Kitchen from './pages/admin/Kitchen'
 import Reports from './pages/admin/Reports'
 import Notifications from './pages/admin/Notifications'
 import Chat from './pages/admin/Chat'
+import Garzones from './pages/admin/Garzones'
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -40,6 +41,7 @@ function AdminRoutes() {
       <Route path="reportes" element={<Reports />} />
       <Route path="notificaciones" element={<Notifications />} />
       <Route path="chat" element={<Chat />} />
+      <Route path="garzones" element={<Garzones />} />
     </Routes>
   )
 }

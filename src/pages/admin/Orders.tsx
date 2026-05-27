@@ -1,18 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
-  getActiveOrders, getAllOrders, getTables, getAllMenuItems,
+  getActiveOrders, getAllOrders, getTables, getAllMenuItems, getWaiters,
   createOrder, addOrderItem, removeOrderItem,
   sendOrderToKitchen, updateOrderItemStatus, closeOrder,
   updateOrderStatus, updateOrderItemQty, updateOrderNotes,
 } from '../../lib/api'
 import { PageLoader } from '../../components/ui/LoadingSpinner'
-import type { Order, OrderItem, Table, MenuItem } from '../../types'
+import type { Order, OrderItem, Table, MenuItem, Waiter } from '../../types'
 import {
   UtensilsCrossed, Plus, Send, CreditCard, X, Search,
   Clock, ChefHat, CheckCircle2, Truck, AlertCircle,
   RefreshCw, ExternalLink, Pencil, Ban, History,
   TableProperties, Banknote, Smartphone, Receipt, ArrowRight,
-  ChevronDown, ChevronUp, Minus, BarChart2, TrendingUp,
+  ChevronDown, ChevronUp, Minus, BarChart2, TrendingUp, User2,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import clsx from 'clsx'
@@ -66,7 +66,7 @@ const PAYMENT_METHODS = [
 
 // ── Kitchen ticket ────────────────────────────────────────────────────────────
 
-function buildTicketHTML(order: Order, table: Table, pendingItems: OrderItem[]): string {
+function buildTicketHTML(order: Order, table: Table, pendingItems: OrderItem[], waiterName?: string): string {
   const now     = new Date()
   const hora    = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
   const fecha   = now.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -134,6 +134,10 @@ function buildTicketHTML(order: Order, table: Table, pendingItems: OrderItem[]):
   .name      { font-size: 15px; font-weight: bold; flex: 1; line-height: 1.2; }
   .note      { padding-left: 34px; font-size: 11px; font-style: italic; margin-top: 1px; }
 
+  /* Garzon */
+  .garzon     { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 2px 0; color: #555; }
+  .garzon b   { color: #000; font-size: 13px; }
+
   /* Order note */
   .order-note { font-size: 12px; font-style: italic; padding: 3px 0; }
 
@@ -168,6 +172,8 @@ function buildTicketHTML(order: Order, table: Table, pendingItems: OrderItem[]):
 </div>
 
 <div class="cocina-title">— COCINA —</div>
+
+${(waiterName ?? order.waiter_name) ? `<div class="garzon">Garzon: <b>${waiterName ?? order.waiter_name}</b></div>` : ''}
 
 ${itemsHTML}
 
@@ -546,16 +552,17 @@ function PaymentModal({ order, onConfirm, onClose }: {
 
 // ── OrderPanel ────────────────────────────────────────────────────────────────
 
-function OrderPanel({ table, order, menuItems, onRefresh }: {
-  table: Table; order?: Order; menuItems: MenuItem[]; onRefresh: () => void
+function OrderPanel({ table, order, menuItems, waiters, onRefresh }: {
+  table: Table; order?: Order; menuItems: MenuItem[]; waiters: Waiter[]; onRefresh: () => void
 }) {
-  const [showAdd,     setShowAdd]     = useState(false)
-  const [showPayment, setShowPayment] = useState(false)
-  const [showCancel,  setShowCancel]  = useState(false)
-  const [editNotes,   setEditNotes]   = useState(false)
-  const [notesValue,  setNotesValue]  = useState(order?.notes ?? '')
-  const [loading,     setLoading]     = useState<string | null>(null)
-  const [error,       setError]       = useState<string | null>(null)
+  const [showAdd,       setShowAdd]       = useState(false)
+  const [showPayment,   setShowPayment]   = useState(false)
+  const [showCancel,    setShowCancel]    = useState(false)
+  const [editNotes,     setEditNotes]     = useState(false)
+  const [notesValue,    setNotesValue]    = useState(order?.notes ?? '')
+  const [loading,       setLoading]       = useState<string | null>(null)
+  const [error,         setError]         = useState<string | null>(null)
+  const [selectedWaiter, setSelectedWaiter] = useState('')
   const notesRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -570,24 +577,64 @@ function OrderPanel({ table, order, menuItems, onRefresh }: {
     finally { setLoading(null) }
   }
 
-  // No order → free table
+  // No order → free table: select waiter then open
   if (!order) {
     return (
-      <div className="flex flex-col h-full items-center justify-center gap-4 text-center p-8">
-        <div className="w-16 h-16 rounded-full bg-calipso-50 flex items-center justify-center">
-          <UtensilsCrossed size={28} className="text-calipso" />
+      <div className="flex flex-col h-full p-6 gap-5 overflow-y-auto">
+        {/* Mesa info */}
+        <div className="flex items-center gap-3">
+          <div className="w-14 h-14 rounded-full bg-calipso-50 flex items-center justify-center flex-shrink-0">
+            <UtensilsCrossed size={26} className="text-calipso" />
+          </div>
+          <div>
+            <p className="font-display italic text-xl text-ink font-bold">Mesa {table.number} — Libre</p>
+            <p className="text-sm text-ink-secondary">{table.capacity} personas · {LOC_LABEL[table.location]}</p>
+          </div>
         </div>
+
+        {/* Waiter selector */}
         <div>
-          <p className="font-display italic text-xl text-ink">Mesa {table.number} — Libre</p>
-          <p className="text-sm text-ink-secondary mt-1">{table.capacity} personas · {LOC_LABEL[table.location]}</p>
+          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-ink-secondary mb-3">
+            <User2 size={12} /> ¿Quién atiende esta mesa?
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {waiters.map(w => (
+              <button
+                key={w.id}
+                onClick={() => setSelectedWaiter(w.name)}
+                className={clsx(
+                  'px-3 py-2.5 rounded-card text-sm font-semibold border-2 transition-all text-left',
+                  selectedWaiter === w.name
+                    ? 'border-calipso bg-calipso text-white shadow-brand-md'
+                    : 'border-calipso-100 text-ink hover:border-calipso/40 bg-white'
+                )}
+              >
+                <span className={clsx(
+                  'inline-flex w-7 h-7 rounded-full items-center justify-center text-[10px] font-bold mr-2 flex-shrink-0',
+                  selectedWaiter === w.name ? 'bg-white/20' : 'bg-calipso-50 text-calipso'
+                )}>
+                  {w.name.split(' ').map(p => p[0]).slice(0, 2).join('')}
+                </span>
+                {w.name}
+              </button>
+            ))}
+          </div>
+          {waiters.length === 0 && (
+            <p className="text-xs text-ink-secondary italic">
+              No hay garzones activos. Configúralos en{' '}
+              <a href="/admin/garzones" className="text-calipso underline">Garzones</a>.
+            </p>
+          )}
         </div>
+
+        {/* Open order */}
         <button
-          onClick={() => wrap('create', async () => { await createOrder(table.id) })}
-          disabled={loading === 'create'}
-          className="flex items-center gap-2 bg-calipso text-white px-6 py-3 rounded-input text-sm font-semibold hover:bg-calipso-700 transition-colors disabled:opacity-60"
+          onClick={() => wrap('create', async () => { await createOrder(table.id, selectedWaiter || undefined) })}
+          disabled={loading === 'create' || (waiters.length > 0 && !selectedWaiter)}
+          className="flex items-center justify-center gap-2 bg-calipso text-white px-6 py-3 rounded-input text-sm font-semibold hover:bg-calipso-700 transition-colors disabled:opacity-50"
         >
           {loading === 'create' ? <RefreshCw size={15} className="animate-spin" /> : <Plus size={15} />}
-          Abrir comanda
+          {selectedWaiter ? `Abrir comanda — ${selectedWaiter.split(' ')[0]}` : 'Abrir comanda'}
         </button>
       </div>
     )
@@ -651,12 +698,19 @@ function OrderPanel({ table, order, menuItems, onRefresh }: {
                 {STATUS_CFG[order.status].label}
               </span>
             </div>
-            <p className="text-sm text-ink-secondary mt-0.5">
-              Abierta hace <span className="font-semibold">{elapsed(order.created_at)}</span>
-              {elapsedMin(order.created_at) > 40 && (
-                <span className="text-coral font-semibold ml-1">⚠ Tiempo excedido</span>
+            <div className="flex items-center gap-2 flex-wrap mt-0.5">
+              <p className="text-sm text-ink-secondary">
+                Abierta hace <span className="font-semibold">{elapsed(order.created_at)}</span>
+                {elapsedMin(order.created_at) > 40 && (
+                  <span className="text-coral font-semibold ml-1">⚠ Tiempo excedido</span>
+                )}
+              </p>
+              {order.waiter_name && (
+                <span className="inline-flex items-center gap-1 text-xs bg-calipso-50 text-calipso font-semibold px-2 py-0.5 rounded-full">
+                  <User2 size={10} /> {order.waiter_name}
+                </span>
               )}
-            </p>
+            </div>
           </div>
           <Link to="/admin/cocina" target="_blank"
             className="flex items-center gap-1 text-xs text-calipso hover:underline flex-shrink-0 mt-1">
@@ -857,7 +911,7 @@ function OrderPanel({ table, order, menuItems, onRefresh }: {
                 wrap('kitchen', async () => {
                   await sendOrderToKitchen(order.id)
                   if (printWin) {
-                    printWin.document.write(buildTicketHTML(order, table, pendingItems))
+                    printWin.document.write(buildTicketHTML(order, table, pendingItems, order.waiter_name ?? undefined))
                     printWin.document.close()
                   }
                 })
@@ -1216,6 +1270,7 @@ export default function Orders() {
   const [orders,         setOrders]         = useState<Order[]>([])
   const [allOrders,      setAllOrders]      = useState<Order[]>([])
   const [menuItems,      setMenuItems]      = useState<MenuItem[]>([])
+  const [waiters,        setWaiters]        = useState<Waiter[]>([])
   const [selectedTable,  setSelectedTable]  = useState<string | null>(null)
   const [view,           setView]           = useState<'mesas' | 'historial' | 'registro'>('mesas')
   const [loading,        setLoading]        = useState(true)
@@ -1223,13 +1278,14 @@ export default function Orders() {
   const countRef = useRef(30)
 
   const load = useCallback(async () => {
-    const [t, o, m, all] = await Promise.all([
-      getTables(), getActiveOrders(), getAllMenuItems(), getAllOrders(),
+    const [t, o, m, all, w] = await Promise.all([
+      getTables(), getActiveOrders(), getAllMenuItems(), getAllOrders(), getWaiters(),
     ])
     setTables(t)
     setOrders(o)
     setMenuItems(m)
     setAllOrders(all)
+    setWaiters(w)
     setLoading(false)
     countRef.current = 30
     setCountdown(30)
@@ -1377,6 +1433,7 @@ export default function Orders() {
                 table={selTable}
                 order={selOrder}
                 menuItems={menuItems}
+                waiters={waiters}
                 onRefresh={load}
               />
             ) : (
