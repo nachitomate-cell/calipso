@@ -64,6 +64,128 @@ const PAYMENT_METHODS = [
   { id: 'transferencia',label: 'Transferencia', Icon: Smartphone },
 ] as const
 
+// ── Kitchen ticket ────────────────────────────────────────────────────────────
+
+function buildTicketHTML(order: Order, table: Table, pendingItems: OrderItem[]): string {
+  const now     = new Date()
+  const hora    = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+  const fecha   = now.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const loc     = LOC_LABEL[table.location] ?? table.location
+
+  const itemsHTML = pendingItems.map(item => `
+    <div class="item">
+      <div class="item-row">
+        <span class="qty">${item.quantity}</span>
+        <span class="name">${item.menu_item?.name ?? item.menu_item_id}</span>
+      </div>
+      ${item.notes ? `<div class="note">➔ ${item.notes}</div>` : ''}
+    </div>
+  `).join('')
+
+  const noteHTML = order.notes
+    ? `<div class="sep-dash"></div><div class="order-note">📌 ${order.notes}</div>`
+    : ''
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Comanda Mesa ${table.number}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Courier New', Courier, monospace;
+    width: 80mm;
+    padding: 4mm 4mm 10mm;
+    color: #000;
+    font-size: 13px;
+  }
+  .center  { text-align: center; }
+  .right   { text-align: right; }
+  .bold    { font-weight: bold; }
+
+  /* Header */
+  .brand   { font-size: 22px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase; }
+  .sub     { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; margin-top: 1px; }
+
+  /* Separadores */
+  .sep-solid { border-top: 2px solid #000; margin: 5px 0; }
+  .sep-dash  { border-top: 1px dashed #000; margin: 5px 0; }
+
+  /* Meta */
+  .meta      { display: flex; justify-content: space-between; align-items: flex-end; padding: 4px 0; }
+  .label     { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #555; }
+  .mesa-num  { font-size: 36px; font-weight: 900; line-height: 1; }
+  .loc       { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+  .time-big  { font-size: 24px; font-weight: 900; line-height: 1; }
+
+  /* Título cocina */
+  .cocina-title {
+    font-size: 11px; font-weight: bold; letter-spacing: 3px;
+    text-transform: uppercase; text-align: center;
+    background: #000; color: #fff;
+    padding: 3px 0; margin: 4px 0;
+  }
+
+  /* Items */
+  .item      { margin: 6px 0; }
+  .item-row  { display: flex; align-items: baseline; gap: 6px; }
+  .qty       { font-size: 20px; font-weight: 900; min-width: 28px; flex-shrink: 0; line-height: 1.1; }
+  .name      { font-size: 15px; font-weight: bold; flex: 1; line-height: 1.2; }
+  .note      { padding-left: 34px; font-size: 11px; font-style: italic; margin-top: 1px; }
+
+  /* Order note */
+  .order-note { font-size: 12px; font-style: italic; padding: 3px 0; }
+
+  /* Footer */
+  .footer    { margin-top: 8px; font-size: 9px; color: #888; text-align: center; }
+
+  @media print {
+    body  { width: 80mm; }
+    @page { margin: 0; size: 80mm auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="center">
+  <div class="brand">Calipso</div>
+  <div class="sub">Cocina de Mar &mdash; Concón</div>
+</div>
+
+<div class="sep-solid"></div>
+
+<div class="meta">
+  <div>
+    <div class="label">Mesa</div>
+    <div class="mesa-num">${table.number}</div>
+    <div class="loc">${loc}</div>
+  </div>
+  <div class="right">
+    <div class="label">${fecha}</div>
+    <div class="time-big">${hora}</div>
+  </div>
+</div>
+
+<div class="cocina-title">— COCINA —</div>
+
+${itemsHTML}
+
+${noteHTML}
+
+<div class="sep-solid"></div>
+<div class="footer">Calipso Concón &bull; Sistema interno</div>
+
+<script>
+  window.onload = function() {
+    window.print();
+    setTimeout(function() { window.close(); }, 800);
+  };
+</script>
+</body>
+</html>`
+}
+
 // ── TableCard ─────────────────────────────────────────────────────────────────
 
 function TableCard({ table, order, selected, onClick }: {
@@ -723,10 +845,23 @@ function OrderPanel({ table, order, menuItems, onRefresh }: {
             <Plus size={13} /> Agregar
           </button>
 
-          {/* Send to kitchen */}
+          {/* Send to kitchen + print ticket */}
           {hasPending && order.status !== 'ready' && (
             <button
-              onClick={() => wrap('kitchen', () => sendOrderToKitchen(order.id))}
+              onClick={() => {
+                // Capturamos los ítems pendientes ANTES del envío
+                const pendingItems = items.filter(i => i.status === 'pending')
+                // Abrimos la ventana de forma síncrona (dentro del click handler)
+                // para evitar que el bloqueador de popups la rechace
+                const printWin = window.open('', '_blank', 'width=420,height=620,toolbar=no,menubar=no,location=no,status=no')
+                wrap('kitchen', async () => {
+                  await sendOrderToKitchen(order.id)
+                  if (printWin) {
+                    printWin.document.write(buildTicketHTML(order, table, pendingItems))
+                    printWin.document.close()
+                  }
+                })
+              }}
               disabled={loading === 'kitchen'}
               className="flex items-center gap-1.5 bg-amber-500 text-white text-xs font-semibold px-3 py-2 rounded-input hover:bg-amber-600 transition-colors disabled:opacity-50 flex-1 justify-center"
             >
