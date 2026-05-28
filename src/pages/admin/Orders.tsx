@@ -54,8 +54,8 @@ const ITEM_CFG = {
   delivered:  { Icon: Truck,       cls: 'text-ink/20',    label: 'Entregado'  },
 } as const
 
-const LOCATIONS: Table['location'][] = ['terraza', 'interior', 'barra']
-const LOC_LABEL = { terraza: 'Terraza', interior: 'Interior', barra: 'Barra' }
+const LOCATIONS: Table['location'][] = ['terraza', 'comedor', 'comedor2']
+const LOC_LABEL = { terraza: 'Terraza', comedor: 'Comedor', comedor2: 'Comedor 2' }
 
 const PAYMENT_METHODS = [
   { id: 'efectivo',     label: 'Efectivo',      Icon: Banknote },
@@ -68,9 +68,9 @@ const PAYMENT_METHODS = [
 
 // Código de ubicación para el número de mesa (ej: 1 + Interior → "1C")
 const LOC_CODE: Record<Table['location'], string> = {
-  interior: 'C',
+  comedor:  'C',
   terraza:  'T',
-  barra:    'B',
+  comedor2: 'C2',
 }
 
 // Mapeo slug de categoría → sección de comanda

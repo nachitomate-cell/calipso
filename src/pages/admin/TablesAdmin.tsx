@@ -9,8 +9,8 @@ import clsx from 'clsx'
 
 const locationLabels: Record<TableLocation, string> = {
   terraza: 'Terraza',
-  interior: 'Interior',
-  barra: 'Barra',
+  comedor: 'Comedor',
+  comedor2: 'Comedor 2',
 }
 
 // Per spec: free=E1F5EE/3B6D11 | occupied=FAECE7/E8593C | reserved=FAEEDA/BA7517 | cleaning=F1EFE8/888780
@@ -22,8 +22,8 @@ const tableCardStyle = {
 
 const locationAccent: Record<TableLocation, string> = {
   terraza: 'text-calipso bg-calipso-50',
-  interior: 'text-[#BA7517] bg-arena-warm',
-  barra: 'text-ink-secondary bg-status-cleaning',
+  comedor: 'text-[#BA7517] bg-arena-warm',
+  comedor2: 'text-ink-secondary bg-status-cleaning',
 }
 
 export default function TablesAdmin() {
@@ -38,7 +38,7 @@ export default function TablesAdmin() {
   useEffect(() => { load() }, [])
 
   const openModal = (table?: Table) => {
-    setForm(table ?? { capacity: 2, location: 'interior', is_active: true })
+    setForm(table ?? { capacity: 2, location: 'comedor', is_active: true })
     setModal({ open: true, table })
   }
 
@@ -51,7 +51,7 @@ export default function TablesAdmin() {
         ...(modal.table ? { id: modal.table.id } : {}),
         number: Number(form.number),
         capacity: Number(form.capacity),
-        location: form.location ?? 'interior',
+        location: form.location ?? 'comedor',
         is_active: form.is_active ?? true,
       })
       await load()
@@ -63,12 +63,12 @@ export default function TablesAdmin() {
 
   if (loading) return <PageLoader />
 
-  const locations: (TableLocation | 'all')[] = ['all', 'terraza', 'interior', 'barra']
+  const locations: (TableLocation | 'all')[] = ['all', 'terraza', 'comedor', 'comedor2']
   const filtered = activeLocation === 'all' ? tables : tables.filter(t => t.location === activeLocation)
   const grouped: Record<TableLocation, Table[]> = {
-    terraza: filtered.filter(t => t.location === 'terraza'),
-    interior: filtered.filter(t => t.location === 'interior'),
-    barra: filtered.filter(t => t.location === 'barra'),
+    terraza:  filtered.filter(t => t.location === 'terraza'),
+    comedor:  filtered.filter(t => t.location === 'comedor'),
+    comedor2: filtered.filter(t => t.location === 'comedor2'),
   }
 
   return (
@@ -190,12 +190,12 @@ export default function TablesAdmin() {
             />
             <Select
               label="Ubicación"
-              value={form.location ?? 'interior'}
+              value={form.location ?? 'comedor'}
               onChange={e => setForm(f => ({ ...f, location: e.target.value as TableLocation }))}
             >
               <option value="terraza">Terraza</option>
-              <option value="interior">Interior</option>
-              <option value="barra">Barra</option>
+              <option value="comedor">Comedor</option>
+              <option value="comedor2">Comedor 2</option>
             </Select>
             <div className="flex items-end pb-1">
               <label className="flex items-center gap-2 text-sm text-ink-secondary cursor-pointer">

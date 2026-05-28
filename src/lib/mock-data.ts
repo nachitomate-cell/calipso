@@ -139,13 +139,13 @@ export const mockTables: Table[] = [
   { id: '3', number: 3, capacity: 4, location: 'terraza', is_active: true },
   { id: '4', number: 4, capacity: 4, location: 'terraza', is_active: true },
   { id: '5', number: 5, capacity: 6, location: 'terraza', is_active: true },
-  { id: '6', number: 6, capacity: 2, location: 'interior', is_active: true },
-  { id: '7', number: 7, capacity: 4, location: 'interior', is_active: true },
-  { id: '8', number: 8, capacity: 4, location: 'interior', is_active: true },
-  { id: '9', number: 9, capacity: 8, location: 'interior', is_active: true },
-  { id: '10', number: 10, capacity: 2, location: 'barra', is_active: true },
-  { id: '11', number: 11, capacity: 2, location: 'barra', is_active: true },
-  { id: '12', number: 12, capacity: 2, location: 'barra', is_active: false },
+  { id: '6', number: 6, capacity: 2, location: 'comedor', is_active: true },
+  { id: '7', number: 7, capacity: 4, location: 'comedor', is_active: true },
+  { id: '8', number: 8, capacity: 4, location: 'comedor', is_active: true },
+  { id: '9', number: 9, capacity: 8, location: 'comedor', is_active: true },
+  { id: '10', number: 10, capacity: 2, location: 'comedor2', is_active: true },
+  { id: '11', number: 11, capacity: 2, location: 'comedor2', is_active: true },
+  { id: '12', number: 12, capacity: 2, location: 'comedor2', is_active: false },
 ]
 
 export const mockReservations: Reservation[] = [

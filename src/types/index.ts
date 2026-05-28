@@ -29,7 +29,7 @@ export interface Table {
   id: string
   number: number
   capacity: number
-  location: 'interior' | 'terraza' | 'barra'
+  location: 'comedor' | 'terraza' | 'comedor2'
   is_active: boolean
 }
 
