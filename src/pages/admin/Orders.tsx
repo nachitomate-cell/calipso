@@ -12,7 +12,7 @@ import {
   Clock, ChefHat, CheckCircle2, Truck, AlertCircle,
   RefreshCw, ExternalLink, Pencil, Ban, History,
   TableProperties, Banknote, Smartphone, Receipt, ArrowRight,
-  ChevronDown, ChevronUp, Minus, BarChart2, TrendingUp, User2, Star, Zap,
+  ChevronDown, ChevronUp, Minus, BarChart2, TrendingUp, User2, Star, Zap, Eye,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import clsx from 'clsx'
@@ -78,9 +78,10 @@ const SLUG_TO_SECTION: Record<string, string> = {
   fondos:   'Principal',
   arroces:  'Principal',
   postres:  'Postre',
-  bebidas:  'Agregado',
+  bebidas:  'Tragos - Vinos',
 }
-const SECTION_ORDER = ['Entrada', 'Principal', 'Agregado', 'Postre']
+// Mismo orden que el sistema antiguo
+const SECTION_ORDER = ['Entrada', 'Principal', 'Agregado', 'Tragos - Vinos', 'Postre']
 
 function buildTicketHTML(order: Order, table: Table, pendingItems: OrderItem[], waiterName?: string): string {
   const now  = new Date()
@@ -173,6 +174,134 @@ ${noteHTML}
 </script>
 </body>
 </html>`
+}
+
+// ── ComandaPreview ────────────────────────────────────────────────────────────
+// Vista previa en pantalla antes de enviar a cocina (igual al sistema antiguo)
+
+function ComandaPreview({ order, table, pendingItems, onConfirm, onClose }: {
+  order: Order
+  table: Table
+  pendingItems: OrderItem[]
+  onConfirm: () => Promise<void>
+  onClose: () => void
+}) {
+  const [saving, setSaving] = useState(false)
+
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const dt  = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()} ` +
+               `${pad(now.getHours())}:${pad(now.getMinutes())}`
+  const mesaCode = `${table.number}${LOC_CODE[table.location] ?? ''}`
+
+  // Agrupar ítems por sección
+  const grouped: Record<string, OrderItem[]> = {}
+  SECTION_ORDER.forEach(s => { grouped[s] = [] })
+  pendingItems.forEach(item => {
+    const slug    = item.menu_item?.category?.slug ?? ''
+    const section = SLUG_TO_SECTION[slug] ?? 'Agregado'
+    if (!grouped[section]) grouped[section] = []
+    grouped[section].push(item)
+  })
+
+  const handleConfirm = async () => {
+    setSaving(true)
+    try { await onConfirm() } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-card shadow-brand-lg w-full max-w-sm flex flex-col"
+        style={{ maxHeight: '90dvh' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-calipso-100 flex-shrink-0">
+          <Eye size={20} className="text-calipso flex-shrink-0" />
+          <span className="font-display italic text-lg font-bold text-ink flex-1">Vista previa — comanda</span>
+          <button onClick={onClose} className="text-ink-secondary hover:text-ink p-1"><X size={22} /></button>
+        </div>
+
+        {/* Ticket */}
+        <div className="overflow-y-auto flex-1 p-4">
+          <div className="border-2 border-dashed border-calipso-200 rounded-card bg-[#FAFAF7] p-5 font-mono">
+
+            {/* Mesa */}
+            <p className="text-center text-lg font-bold tracking-wide mb-1">
+              MESA N° {mesaCode}
+            </p>
+            <div className="border-t-2 border-ink/60 my-2" />
+
+            {/* Garzón + hora */}
+            <p className="text-sm mb-0.5">
+              <span className="font-bold">Garzón: </span>{order.waiter_name ?? '—'}
+            </p>
+            <p className="text-xs text-ink-secondary mb-2">{dt}</p>
+            <div className="border-t border-ink/30 my-2" />
+
+            {/* Secciones */}
+            {SECTION_ORDER.map(section => {
+              const sectionItems = grouped[section] ?? []
+              return (
+                <div key={section} className="mb-2">
+                  <p className="text-sm font-bold flex items-center gap-1">
+                    <span className="text-calipso text-base">»</span> {section}
+                  </p>
+                  {sectionItems.length > 0 ? (
+                    <div className="pl-4 mt-1 space-y-0.5">
+                      {sectionItems.map(item => (
+                        <div key={item.id} className="text-sm flex gap-2 items-baseline">
+                          <span className="font-bold w-5 flex-shrink-0 text-calipso">{item.quantity}</span>
+                          <span className="flex-1">{item.menu_item?.name ?? '—'}</span>
+                        </div>
+                      ))}
+                      {/* Notas de ítems */}
+                      {sectionItems.some(i => i.notes) && (
+                        <div className="mt-0.5 space-y-0.5">
+                          {sectionItems.filter(i => i.notes).map(item => (
+                            <p key={item.id} className="text-xs italic text-amber-700 pl-5">
+                              ↳ {item.menu_item?.name}: {item.notes}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="pl-4 text-xs text-ink/25 mt-0.5">—</p>
+                  )}
+                  <div className="border-t border-dashed border-ink/20 mt-2" />
+                </div>
+              )
+            })}
+
+            {/* Nota de comanda */}
+            {order.notes && (
+              <p className="text-xs italic text-ink-secondary mt-1">📌 {order.notes}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Botones */}
+        <div className="px-4 pb-5 pt-3 space-y-2 flex-shrink-0 border-t border-calipso-100">
+          <button
+            onClick={handleConfirm}
+            disabled={saving}
+            className="w-full flex items-center justify-center gap-3 bg-amber-500 text-white text-lg font-bold py-4 rounded-input hover:bg-amber-600 transition-colors disabled:opacity-50"
+          >
+            {saving ? <RefreshCw size={20} className="animate-spin" /> : <Send size={20} />}
+            Confirmar y enviar a cocina
+          </button>
+          <button
+            onClick={onClose}
+            className="w-full text-base font-semibold text-ink-secondary py-3 rounded-input hover:bg-calipso-50 transition-colors border-2 border-calipso-100"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ── TableCard ─────────────────────────────────────────────────────────────────
@@ -581,12 +710,14 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
   const [showAdd,        setShowAdd]        = useState(false)
   const [showPayment,    setShowPayment]    = useState(false)
   const [showCancel,     setShowCancel]     = useState(false)
+  const [showPreview,    setShowPreview]    = useState(false)
   const [editNotes,      setEditNotes]      = useState(false)
   const [notesValue,     setNotesValue]     = useState(order?.notes ?? '')
   const [loading,        setLoading]        = useState<string | null>(null)
   const [error,          setError]          = useState<string | null>(null)
   const [selectedWaiter, setSelectedWaiter] = useState('')
-  const notesRef = useRef<HTMLInputElement>(null)
+  const notesRef   = useRef<HTMLInputElement>(null)
+  const printWinRef = useRef<Window | null>(null)
 
   useEffect(() => {
     setNotesValue(order?.notes ?? '')
@@ -922,25 +1053,19 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
           <Plus size={18} /> Agregar platos
         </button>
 
-        {/* ── Botón: Enviar a cocina (grande, destacado) */}
+        {/* ── Botón: Ver comanda y enviar a cocina */}
         {hasPending && order.status !== 'ready' && (
           <button
             onClick={() => {
-              const pendingItems = items.filter(i => i.status === 'pending')
-              const printWin = window.open('', '_blank', 'width=420,height=620,toolbar=no,menubar=no,location=no,status=no')
-              wrap('kitchen', async () => {
-                await sendOrderToKitchen(order.id)
-                if (printWin) {
-                  printWin.document.write(buildTicketHTML(order, table, pendingItems, order.waiter_name ?? undefined))
-                  printWin.document.close()
-                }
-              })
+              // window.open debe estar en el click handler síncrono (evita bloqueador de popups)
+              printWinRef.current = window.open('', '_blank', 'width=420,height=620,toolbar=no,menubar=no,location=no,status=no')
+              setShowPreview(true)
             }}
             disabled={loading === 'kitchen'}
             className="w-full flex items-center justify-center gap-3 bg-amber-500 text-white text-lg font-bold px-4 py-4 rounded-input hover:bg-amber-600 transition-colors disabled:opacity-50"
           >
-            {loading === 'kitchen' ? <RefreshCw size={20} className="animate-spin" /> : <Send size={20} />}
-            Enviar a cocina
+            {loading === 'kitchen' ? <RefreshCw size={20} className="animate-spin" /> : <Eye size={20} />}
+            Ver comanda y enviar
           </button>
         )}
 
@@ -985,6 +1110,30 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
       )}
       {showPayment && (
         <PaymentModal order={order} onConfirm={handlePayment} onClose={() => setShowPayment(false)} />
+      )}
+      {showPreview && (
+        <ComandaPreview
+          order={order}
+          table={table}
+          pendingItems={items.filter(i => i.status === 'pending')}
+          onConfirm={async () => {
+            const pendingSnapshot = items.filter(i => i.status === 'pending')
+            const pw = printWinRef.current
+            wrap('kitchen', async () => {
+              await sendOrderToKitchen(order.id)
+              if (pw) {
+                pw.document.write(buildTicketHTML(order, table, pendingSnapshot, order.waiter_name ?? undefined))
+                pw.document.close()
+              }
+            })
+            setShowPreview(false)
+          }}
+          onClose={() => {
+            printWinRef.current?.close()
+            printWinRef.current = null
+            setShowPreview(false)
+          }}
+        />
       )}
     </div>
   )
