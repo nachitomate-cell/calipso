@@ -1,28 +1,30 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
+import { signInWithEmailAndPassword } from 'firebase/auth'
+import { auth } from '../../lib/firebase'
 import { Input } from '../../components/ui/Input'
 import { AlertCircle } from 'lucide-react'
 import Logo from '../../components/ui/Logo'
 
 export default function Login() {
-  const [email, setEmail] = useState('')
+  const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [loading,  setLoading]  = useState(false)
+  const [error,    setError]    = useState<string | null>(null)
   const navigate = useNavigate()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setError('Credenciales incorrectas. Intenta nuevamente.')
-    } else {
+    try {
+      await signInWithEmailAndPassword(auth, email, password)
       navigate('/admin')
+    } catch {
+      setError('Credenciales incorrectas. Intenta nuevamente.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (

@@ -1,4 +1,4 @@
-import type { Category, MenuItem, Table, Reservation, InventoryItem, Order, OrderItem, ChatSession, ChatMessage, Waiter } from '../types'
+import type { Category, MenuItem, Table, Reservation, InventoryItem, Order, OrderItem, ChatSession, ChatMessage, Waiter, Customer, CustomerVisit } from '../types'
 
 // Helper: date offset from today
 function daysFromNow(n: number): string {
@@ -373,6 +373,201 @@ export const mockChatMessages: ChatMessage[] = [
   { id: 'cm-8',  session_id: 'cs-3', sender: 'guest', text: 'Hola, quiero celebrar el cumpleaños de mi esposa, ¿puedo llevar una torta?', created_at: new Date(Date.now() - 1800000).toISOString() },
   { id: 'cm-9',  session_id: 'cs-3', sender: 'bot',   text: '¡Con gusto! Solo avísanos al reservar para coordinar el servicio de corte y presentación. ¿Quieres que te ayudemos a planificar algo especial?', created_at: new Date(Date.now() - 1799000).toISOString() },
   { id: 'cm-10', session_id: 'cs-3', sender: 'guest', text: 'Sí por favor, también queremos decoración en la mesa si es posible', created_at: new Date(Date.now() - 900000).toISOString() },
+]
+
+// ── Customers ────────────────────────────────────────────────────────────────
+
+export const mockCustomers: Customer[] = [
+  {
+    id: 'cu-1', name: 'Carlos Muñoz', email: 'carlos@example.com', phone: '+56912345678',
+    birthday: '1980-05-15',
+    notes: 'Prefiere mesa con vista al mar. Celebra aniversario de bodas en junio. No le gustan las alcaparras.',
+    tags: ['vip', 'frecuente'],
+    favorite_dish_id: '9', total_visits: 14, total_spent: 1_250_000,
+    last_visit: daysFromNow(-6),
+    created_at: new Date(Date.now() - 365 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 6 * 86400000).toISOString(),
+  },
+  {
+    id: 'cu-2', name: 'Ana Fernández', email: 'ana@example.com', phone: '+56987654321',
+    birthday: '1992-11-03',
+    notes: 'Visita habitualmente los fines de semana. Prefiere ceviches y platos ligeros.',
+    tags: ['frecuente'],
+    favorite_dish_id: '5', total_visits: 8, total_spent: 620_000,
+    last_visit: daysFromNow(-6),
+    created_at: new Date(Date.now() - 280 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 6 * 86400000).toISOString(),
+  },
+  {
+    id: 'cu-3', name: 'Pedro Rojas', email: 'pedro@example.com', phone: '+56922334455',
+    birthday: '1975-08-22',
+    notes: 'Viene con grupos de 5-6 personas. Solicita factura siempre. Buen cliente corporativo.',
+    tags: ['vip', 'corporativo', 'frecuente'],
+    favorite_dish_id: '12', total_visits: 11, total_spent: 1_620_000,
+    last_visit: daysFromNow(-5),
+    created_at: new Date(Date.now() - 400 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+  },
+  {
+    id: 'cu-4', name: 'Valentina Soto', email: 'vale@example.com', phone: '+56933445566',
+    birthday: '1995-02-14',
+    notes: 'Un comensal alérgico a los crustáceos. Siempre avisa al reservar.',
+    tags: ['frecuente', 'alergia'],
+    favorite_dish_id: '6', total_visits: 5, total_spent: 380_000,
+    last_visit: daysFromNow(-4),
+    created_at: new Date(Date.now() - 180 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 4 * 86400000).toISOString(),
+  },
+  {
+    id: 'cu-5', name: 'Daniela Morales', email: 'dani@example.com', phone: '+56955667788',
+    birthday: '1988-07-30',
+    notes: 'Muy buena clienta. Le encanta el pulpo. Recomienda el restaurante frecuentemente.',
+    tags: ['frecuente'],
+    favorite_dish_id: '2', total_visits: 9, total_spent: 720_000,
+    last_visit: daysFromNow(-3),
+    created_at: new Date(Date.now() - 320 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+  },
+  {
+    id: 'cu-6', name: 'Roberto Pizarro', email: 'rpizarro@example.com', phone: '+56966778899',
+    birthday: '1983-12-07',
+    notes: 'Solicita mesa con vista. Llegó recomendado por Carlos Muñoz.',
+    tags: ['nuevo'],
+    favorite_dish_id: '8', total_visits: 2, total_spent: 195_000,
+    last_visit: daysFromNow(-3),
+    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+  },
+  {
+    id: 'cu-7', name: 'Felipe Torres', email: 'ftorres@example.com', phone: '+56911001122',
+    birthday: '1978-04-19',
+    notes: 'VIP. Viene con clientes de su empresa para cerrar negocios. Solicita el menú degustación cuando hay.',
+    tags: ['vip', 'frecuente', 'corporativo'],
+    favorite_dish_id: '11', total_visits: 12, total_spent: 1_480_000,
+    last_visit: daysFromNow(-1),
+    created_at: new Date(Date.now() - 500 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+  {
+    id: 'cu-8', name: 'Empresa TechCorp', email: 'eventos@techcorp.cl', phone: '+56988990011',
+    birthday: null,
+    notes: 'Almuerzo corporativo mensual. Siempre grupo de 8-12 personas. Necesita boleta a nombre de TechCorp SpA.',
+    tags: ['corporativo', 'vip'],
+    favorite_dish_id: '12', total_visits: 6, total_spent: 2_340_000,
+    last_visit: daysFromNow(-2),
+    created_at: new Date(Date.now() - 200 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
+  {
+    id: 'cu-9', name: 'Sofía Bravo', email: 'sofia@example.com', phone: '+56922112233',
+    birthday: '1999-09-25',
+    notes: null,
+    tags: ['nuevo'],
+    favorite_dish_id: '1', total_visits: 1, total_spent: 89_000,
+    last_visit: daysFromNow(0),
+    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+  {
+    id: 'cu-10', name: 'Camila Vega', email: 'cvega@example.com', phone: '+56977889900',
+    birthday: '1991-06-11',
+    notes: 'Prefiere ceviches. Suele venir con amigas a mediodía.',
+    tags: ['frecuente'],
+    favorite_dish_id: '7', total_visits: 7, total_spent: 560_000,
+    last_visit: daysFromNow(-2),
+    created_at: new Date(Date.now() - 250 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
+  {
+    id: 'cu-11', name: 'Héctor Palma', email: 'hpalma@example.com', phone: '+56955445566',
+    birthday: '1970-01-28',
+    notes: 'Le gustan los choros y las machas. Suele pedir vino blanco.',
+    tags: ['frecuente'],
+    favorite_dish_id: '3', total_visits: 5, total_spent: 440_000,
+    last_visit: daysFromNow(-1),
+    created_at: new Date(Date.now() - 190 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+  {
+    id: 'cu-12', name: 'Marcelo Núñez', email: 'marcelo@example.com', phone: '+56933223344',
+    birthday: '1986-10-05',
+    notes: 'Cumpleaños hoy. Le gusta el arroz meloso. Viene con grupos.',
+    tags: ['nuevo', 'cumpleanos'],
+    favorite_dish_id: '12', total_visits: 3, total_spent: 270_000,
+    last_visit: daysFromNow(0),
+    created_at: new Date(Date.now() - 60 * 86400000).toISOString(),
+    updated_at: new Date(Date.now()).toISOString(),
+  },
+  {
+    id: 'cu-13', name: 'Familia González', email: 'gonzalez@example.com', phone: '+56911223344',
+    birthday: null,
+    notes: 'Familia con niños. Un niño alérgico al gluten. Prefieren mesa interior amplia.',
+    tags: ['frecuente', 'alergia'],
+    favorite_dish_id: '8', total_visits: 6, total_spent: 510_000,
+    last_visit: daysFromNow(-5),
+    created_at: new Date(Date.now() - 300 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+  },
+]
+
+export const mockCustomerVisits: CustomerVisit[] = [
+  // Carlos Muñoz (cu-1)
+  { id: 'cv-1',  customer_id: 'cu-1', visit_date: daysFromNow(-6),  party_size: 4, amount_spent: 142000, dishes: ['9','1','17','18'],   notes: 'Aniversario bodas', created_at: new Date(Date.now() - 6*86400000).toISOString() },
+  { id: 'cv-2',  customer_id: 'cu-1', visit_date: daysFromNow(-23), party_size: 2, amount_spent: 98000,  dishes: ['9','5','18'],         notes: null,               created_at: new Date(Date.now() - 23*86400000).toISOString() },
+  { id: 'cv-3',  customer_id: 'cu-1', visit_date: daysFromNow(-45), party_size: 2, amount_spent: 87000,  dishes: ['2','12','17'],        notes: null,               created_at: new Date(Date.now() - 45*86400000).toISOString() },
+  { id: 'cv-4',  customer_id: 'cu-1', visit_date: daysFromNow(-70), party_size: 6, amount_spent: 210000, dishes: ['9','11','1','17','18'], notes: 'Mesa de negocios', created_at: new Date(Date.now() - 70*86400000).toISOString() },
+  { id: 'cv-5',  customer_id: 'cu-1', visit_date: daysFromNow(-95), party_size: 2, amount_spent: 95000,  dishes: ['9','16','18'],        notes: null,               created_at: new Date(Date.now() - 95*86400000).toISOString() },
+
+  // Ana Fernández (cu-2)
+  { id: 'cv-6',  customer_id: 'cu-2', visit_date: daysFromNow(-6),  party_size: 2, amount_spent: 72000,  dishes: ['5','15','17'],        notes: null,               created_at: new Date(Date.now() - 6*86400000).toISOString() },
+  { id: 'cv-7',  customer_id: 'cu-2', visit_date: daysFromNow(-28), party_size: 2, amount_spent: 81000,  dishes: ['5','6','17'],         notes: null,               created_at: new Date(Date.now() - 28*86400000).toISOString() },
+  { id: 'cv-8',  customer_id: 'cu-2', visit_date: daysFromNow(-55), party_size: 4, amount_spent: 124000, dishes: ['5','7','15','18'],    notes: null,               created_at: new Date(Date.now() - 55*86400000).toISOString() },
+
+  // Pedro Rojas (cu-3)
+  { id: 'cv-9',  customer_id: 'cu-3', visit_date: daysFromNow(-5),  party_size: 6, amount_spent: 245000, dishes: ['12','9','1','17','18'], notes: 'Solicita factura', created_at: new Date(Date.now() - 5*86400000).toISOString() },
+  { id: 'cv-10', customer_id: 'cu-3', visit_date: daysFromNow(-35), party_size: 5, amount_spent: 198000, dishes: ['12','2','5','18'],     notes: null,               created_at: new Date(Date.now() - 35*86400000).toISOString() },
+  { id: 'cv-11', customer_id: 'cu-3', visit_date: daysFromNow(-65), party_size: 6, amount_spent: 230000, dishes: ['12','9','11','17'],    notes: 'Solicita factura', created_at: new Date(Date.now() - 65*86400000).toISOString() },
+
+  // Valentina Soto (cu-4)
+  { id: 'cv-12', customer_id: 'cu-4', visit_date: daysFromNow(-4),  party_size: 3, amount_spent: 89000,  dishes: ['6','5','15'],         notes: 'Sin crustáceos',   created_at: new Date(Date.now() - 4*86400000).toISOString() },
+  { id: 'cv-13', customer_id: 'cu-4', visit_date: daysFromNow(-30), party_size: 2, amount_spent: 74000,  dishes: ['6','13','17'],        notes: null,               created_at: new Date(Date.now() - 30*86400000).toISOString() },
+
+  // Daniela Morales (cu-5)
+  { id: 'cv-14', customer_id: 'cu-5', visit_date: daysFromNow(-3),  party_size: 4, amount_spent: 134000, dishes: ['2','5','12','17'],    notes: null,               created_at: new Date(Date.now() - 3*86400000).toISOString() },
+  { id: 'cv-15', customer_id: 'cu-5', visit_date: daysFromNow(-20), party_size: 2, amount_spent: 87000,  dishes: ['2','16','18'],        notes: null,               created_at: new Date(Date.now() - 20*86400000).toISOString() },
+  { id: 'cv-16', customer_id: 'cu-5', visit_date: daysFromNow(-48), party_size: 3, amount_spent: 110000, dishes: ['2','6','15'],         notes: null,               created_at: new Date(Date.now() - 48*86400000).toISOString() },
+
+  // Roberto Pizarro (cu-6)
+  { id: 'cv-17', customer_id: 'cu-6', visit_date: daysFromNow(-3),  party_size: 4, amount_spent: 128000, dishes: ['8','12','17','18'],   notes: 'Mesa con vista',   created_at: new Date(Date.now() - 3*86400000).toISOString() },
+  { id: 'cv-18', customer_id: 'cu-6', visit_date: daysFromNow(-25), party_size: 4, amount_spent: 67000,  dishes: ['8','15'],             notes: null,               created_at: new Date(Date.now() - 25*86400000).toISOString() },
+
+  // Felipe Torres (cu-7)
+  { id: 'cv-19', customer_id: 'cu-7', visit_date: daysFromNow(-1),  party_size: 4, amount_spent: 175000, dishes: ['11','9','1','18'],    notes: null,               created_at: new Date(Date.now() - 1*86400000).toISOString() },
+  { id: 'cv-20', customer_id: 'cu-7', visit_date: daysFromNow(-18), party_size: 6, amount_spent: 240000, dishes: ['11','12','1','17','18'], notes: 'Cierre negocio', created_at: new Date(Date.now() - 18*86400000).toISOString() },
+  { id: 'cv-21', customer_id: 'cu-7', visit_date: daysFromNow(-42), party_size: 4, amount_spent: 162000, dishes: ['11','9','16','17'],   notes: null,               created_at: new Date(Date.now() - 42*86400000).toISOString() },
+
+  // Empresa TechCorp (cu-8)
+  { id: 'cv-22', customer_id: 'cu-8', visit_date: daysFromNow(-2),  party_size: 10, amount_spent: 580000, dishes: ['12','9','2','5','17','18'], notes: 'Almuerzo corp.', created_at: new Date(Date.now() - 2*86400000).toISOString() },
+  { id: 'cv-23', customer_id: 'cu-8', visit_date: daysFromNow(-32), party_size: 12, amount_spent: 690000, dishes: ['12','11','1','18'],  notes: 'Almuerzo corp.',    created_at: new Date(Date.now() - 32*86400000).toISOString() },
+
+  // Sofía Bravo (cu-9)
+  { id: 'cv-24', customer_id: 'cu-9', visit_date: daysFromNow(0),   party_size: 2, amount_spent: 89000,  dishes: ['1','17','18'],        notes: null,               created_at: new Date().toISOString() },
+
+  // Camila Vega (cu-10)
+  { id: 'cv-25', customer_id: 'cu-10', visit_date: daysFromNow(-2), party_size: 2, amount_spent: 87000,  dishes: ['7','5','17'],         notes: null,               created_at: new Date(Date.now() - 2*86400000).toISOString() },
+  { id: 'cv-26', customer_id: 'cu-10', visit_date: daysFromNow(-22),party_size: 4, amount_spent: 124000, dishes: ['7','6','12','18'],    notes: null,               created_at: new Date(Date.now() - 22*86400000).toISOString() },
+
+  // Héctor Palma (cu-11)
+  { id: 'cv-27', customer_id: 'cu-11', visit_date: daysFromNow(-1), party_size: 2, amount_spent: 92000,  dishes: ['3','14','18'],        notes: null,               created_at: new Date(Date.now() - 1*86400000).toISOString() },
+  { id: 'cv-28', customer_id: 'cu-11', visit_date: daysFromNow(-28),party_size: 2, amount_spent: 85000,  dishes: ['3','13','17'],        notes: null,               created_at: new Date(Date.now() - 28*86400000).toISOString() },
+
+  // Marcelo Núñez (cu-12)
+  { id: 'cv-29', customer_id: 'cu-12', visit_date: daysFromNow(0),  party_size: 5, amount_spent: 145000, dishes: ['12','5','17','18'],   notes: 'Cumpleaños',       created_at: new Date().toISOString() },
+  { id: 'cv-30', customer_id: 'cu-12', visit_date: daysFromNow(-30),party_size: 4, amount_spent: 82000,  dishes: ['12','15'],            notes: null,               created_at: new Date(Date.now() - 30*86400000).toISOString() },
+
+  // Familia González (cu-13)
+  { id: 'cv-31', customer_id: 'cu-13', visit_date: daysFromNow(-5), party_size: 7, amount_spent: 198000, dishes: ['8','12','3','15','17'], notes: 'Niño alérgico gluten', created_at: new Date(Date.now() - 5*86400000).toISOString() },
+  { id: 'cv-32', customer_id: 'cu-13', visit_date: daysFromNow(-40),party_size: 6, amount_spent: 167000, dishes: ['8','5','16','18'],    notes: null,               created_at: new Date(Date.now() - 40*86400000).toISOString() },
 ]
 
 export const mockChatSessions: ChatSession[] = [

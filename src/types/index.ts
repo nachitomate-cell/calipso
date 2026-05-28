@@ -125,3 +125,33 @@ export interface AppNotification {
   link?: string
   created_at: string
 }
+
+export type CustomerTag = 'vip' | 'frecuente' | 'corporativo' | 'nuevo' | 'alergia' | 'cumpleanos'
+
+export interface Customer {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  birthday: string | null
+  notes: string | null
+  tags: CustomerTag[]
+  favorite_dish_id: string | null
+  total_visits: number
+  total_spent: number
+  last_visit: string | null
+  created_at: string
+  updated_at: string
+  favorite_dish?: MenuItem
+}
+
+export interface CustomerVisit {
+  id: string
+  customer_id: string
+  visit_date: string
+  party_size: number
+  amount_spent: number
+  dishes: string[]
+  notes: string | null
+  created_at: string
+}

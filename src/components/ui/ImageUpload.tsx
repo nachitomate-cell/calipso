@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { Upload, X, Image } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { storage } from '../../lib/firebase'
 
 interface ImageUploadProps {
   currentUrl?: string | null
@@ -9,24 +10,20 @@ interface ImageUploadProps {
   onClear: () => void
 }
 
-const USE_MOCK = !import.meta.env.VITE_SUPABASE_URL
+const USE_MOCK = !import.meta.env.VITE_FIREBASE_PROJECT_ID
 
-async function uploadToSupabase(file: File, itemId: string): Promise<string> {
+async function uploadToFirebase(file: File, itemId: string): Promise<string> {
   const ext = file.type === 'image/webp' ? 'webp' : 'jpg'
-  const path = `${itemId}.${ext}`
-  const { error } = await supabase.storage
-    .from('dish-images')
-    .upload(path, file, { contentType: file.type, upsert: true })
-  if (error) throw error
-  const { data } = supabase.storage.from('dish-images').getPublicUrl(path)
-  return data.publicUrl
+  const storageRef = ref(storage, `dish-images/${itemId}.${ext}`)
+  await uploadBytes(storageRef, file, { contentType: file.type })
+  return getDownloadURL(storageRef)
 }
 
 export default function ImageUpload({ currentUrl, itemId, onUpload, onClear }: ImageUploadProps) {
-  const [preview, setPreview] = useState<string | null>(currentUrl || null)
-  const [dragging, setDragging] = useState(false)
+  const [preview,   setPreview]   = useState<string | null>(currentUrl || null)
+  const [dragging,  setDragging]  = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error,     setError]     = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFile = useCallback(async (file: File) => {
@@ -45,15 +42,15 @@ export default function ImageUpload({ currentUrl, itemId, onUpload, onClear }: I
     setPreview(localUrl)
 
     if (USE_MOCK || !itemId) {
-      // In demo mode: use local blob URL as the "saved" URL
+      // En modo demo: blob URL local como URL "guardada"
       onUpload(localUrl)
       return
     }
 
-    // Upload to Supabase Storage
+    // Upload to Firebase Storage
     setUploading(true)
     try {
-      const publicUrl = await uploadToSupabase(file, itemId)
+      const publicUrl = await uploadToFirebase(file, itemId)
       setPreview(publicUrl)
       onUpload(publicUrl)
     } catch (e) {
@@ -159,7 +156,7 @@ export default function ImageUpload({ currentUrl, itemId, onUpload, onClear }: I
       )}
       {USE_MOCK && (
         <p style={{ fontFamily: 'Jost, sans-serif', fontSize: '10px', color: 'rgba(28,43,45,0.35)', letterSpacing: '0.05em' }}>
-          Modo demo: la imagen se guarda en local. Conecta Supabase para subir a Storage.
+          Modo demo: la imagen se guarda en local. Conecta Firebase para subir a Storage.
         </p>
       )}
     </div>

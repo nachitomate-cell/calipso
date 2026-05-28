@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
+import { signOut } from 'firebase/auth'
+import { auth } from '../../lib/firebase'
 import {
   LayoutDashboard, UtensilsCrossed, Table2, CalendarDays,
   Package, LogOut, Menu, X, ChevronRight,
-  ClipboardList, ChefHat, BarChart2, Bell, MessageCircle, Users,
+  ClipboardList, ChefHat, BarChart2, Bell, MessageCircle, Users, BookUser,
 } from 'lucide-react'
 import Logo from '../ui/Logo'
 import clsx from 'clsx'
@@ -20,6 +21,7 @@ const navGroups = [
       { to: '/admin/mesas',     label: 'Mesas',       icon: Table2 },
       { to: '/admin/chat',      label: 'Chat',        icon: MessageCircle },
       { to: '/admin/garzones',  label: 'Garzones',    icon: Users },
+      { to: '/admin/clientes',  label: 'Clientes',    icon: BookUser },
     ],
   },
   {
@@ -58,7 +60,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const navigate = useNavigate()
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    await signOut(auth)
     navigate('/admin/login')
   }
 

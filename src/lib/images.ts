@@ -2,9 +2,7 @@
  * Calipso Restaurant — configuración de imágenes
  *
  * Reemplaza cada string vacío con la URL real de la foto.
- * Opciones de almacenamiento:
- *   - Supabase Storage: https://{proyecto}.supabase.co/storage/v1/object/public/dish-images/{nombre}.webp
- *   - Cualquier URL HTTPS pública
+ * Las imágenes de platos se almacenan en Firebase Storage bajo dish-images/{id}.webp
  *
  * Formato recomendado: WebP, máx 1400px de ancho, calidad 85%
  */
@@ -38,11 +36,13 @@ export const PHOTOS = {
 }
 
 /**
- * Supabase Storage URL helper
- * Úsala para construir URLs de platos: dishPhotoUrl('abc123')
+ * Firebase Storage URL helper
+ * Construye la URL pública de descarga de una foto de plato.
+ * Úsala como: dishPhotoUrl('menu-item-id')
  */
 export function dishPhotoUrl(id: string, ext: 'webp' | 'jpg' = 'webp'): string {
-  const base = import.meta.env.VITE_SUPABASE_URL
-  if (!base) return ''
-  return `${base}/storage/v1/object/public/dish-images/${id}.${ext}`
+  const bucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET
+  if (!bucket) return ''
+  const encoded = encodeURIComponent(`dish-images/${id}.${ext}`)
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encoded}?alt=media`
 }
