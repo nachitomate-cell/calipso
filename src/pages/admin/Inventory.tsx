@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
-import { getInventory, upsertInventoryItem, getInventoryByBarcode } from '../../lib/api'
+import { getInventory, upsertInventoryItem, getInventoryByBarcode, getRecipes, upsertRecipe, deleteRecipe, getAllMenuItems } from '../../lib/api'
 import { PageLoader } from '../../components/ui/LoadingSpinner'
 import {
   Package, Search, AlertTriangle, CheckCircle2, XCircle,
   Edit2, Check, X, RefreshCw, TrendingDown, Filter,
   Scan, Camera, CameraOff, Plus, Hash, ClipboardList, RotateCcw,
+  BookOpen, Trash2, UtensilsCrossed,
 } from 'lucide-react'
-import type { InventoryItem } from '../../types'
+import type { InventoryItem, Recipe, MenuItem } from '../../types'
 import clsx from 'clsx'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -976,9 +977,235 @@ function ScannerTab({ onUpdate }: { onUpdate: () => void }) {
   )
 }
 
+// ── Recetas Tab ───────────────────────────────────────────────────────────────
+
+function RecetasTab({ inventory }: { inventory: InventoryItem[] }) {
+  const [recipes,   setRecipes]   = useState<Recipe[]>([])
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [loading,   setLoading]   = useState(true)
+  const [showForm,  setShowForm]  = useState(false)
+  const [editing,   setEditing]   = useState<Recipe | null>(null)
+  const [form,      setForm]      = useState({ menu_item_id: '', inventory_item_id: '', quantity: '' })
+  const [saving,    setSaving]    = useState(false)
+  const [formError, setFormError] = useState('')
+
+  const load = async () => {
+    setLoading(true)
+    const [r, m] = await Promise.all([getRecipes(), getAllMenuItems()])
+    setRecipes(r)
+    setMenuItems(m.filter(m => m.is_available))
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, [])
+
+  const openAdd = () => {
+    setEditing(null)
+    setForm({ menu_item_id: '', inventory_item_id: '', quantity: '' })
+    setFormError('')
+    setShowForm(true)
+  }
+
+  const openEdit = (recipe: Recipe) => {
+    setEditing(recipe)
+    setForm({ menu_item_id: recipe.menu_item_id, inventory_item_id: recipe.inventory_item_id, quantity: String(recipe.quantity) })
+    setFormError('')
+    setShowForm(true)
+  }
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.menu_item_id || !form.inventory_item_id || !form.quantity) {
+      setFormError('Todos los campos son obligatorios')
+      return
+    }
+    const qty = parseFloat(form.quantity)
+    if (isNaN(qty) || qty <= 0) { setFormError('La cantidad debe ser > 0'); return }
+    setSaving(true)
+    try {
+      await upsertRecipe({
+        ...(editing ? { id: editing.id } : {}),
+        menu_item_id: form.menu_item_id,
+        inventory_item_id: form.inventory_item_id,
+        quantity: qty,
+      })
+      await load()
+      setShowForm(false)
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : 'Error al guardar')
+    } finally { setSaving(false) }
+  }
+
+  if (loading) return <PageLoader />
+
+  // Group by menu item
+  const byMenuItem = new Map<string, Recipe[]>()
+  for (const r of recipes) {
+    if (!byMenuItem.has(r.menu_item_id)) byMenuItem.set(r.menu_item_id, [])
+    byMenuItem.get(r.menu_item_id)!.push(r)
+  }
+
+  const selectedInv = inventory.find(i => i.id === form.inventory_item_id)
+
+  return (
+    <div className="space-y-4">
+      {/* Actions bar */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-ink-secondary">
+          {recipes.length} ingrediente{recipes.length !== 1 ? 's' : ''} en {byMenuItem.size} plato{byMenuItem.size !== 1 ? 's' : ''}
+        </p>
+        <button
+          onClick={openAdd}
+          className="flex items-center gap-1.5 bg-coral hover:bg-coral-hover text-white text-sm font-semibold px-4 py-2 rounded-card transition-all"
+        >
+          <Plus size={14} /> Agregar vínculo
+        </button>
+      </div>
+
+      {byMenuItem.size === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <BookOpen size={40} className="text-calipso/30 mb-4" />
+          <p className="font-display italic text-xl text-ink">Sin recetas configuradas</p>
+          <p className="text-base text-ink-secondary mt-1 max-w-sm">
+            Vincula ingredientes del inventario a tus platos. El stock se descontará automáticamente al cobrar una mesa.
+          </p>
+          <button onClick={openAdd} className="mt-4 flex items-center gap-2 text-calipso hover:underline font-semibold text-sm">
+            <Plus size={14} /> Agregar primer vínculo
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {[...byMenuItem.entries()].map(([menuItemId, recs]) => {
+            const mi = recs[0].menu_item
+            return (
+              <div key={menuItemId} className="bg-white rounded-card shadow-brand overflow-hidden">
+                <div className="px-5 py-3 bg-calipso-50 border-b border-calipso-100 flex items-center gap-2">
+                  <UtensilsCrossed size={13} className="text-calipso flex-shrink-0" />
+                  <p className="font-semibold text-ink text-sm">{mi?.name ?? menuItemId}</p>
+                  <span className="text-xs text-ink-secondary ml-auto">{recs.length} ingrediente{recs.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="divide-y divide-calipso-50">
+                  {recs.map(recipe => {
+                    const inv = recipe.inventory_item
+                    return (
+                      <div key={recipe.id} className="flex items-center gap-3 px-5 py-3 hover:bg-calipso-50/50 transition-colors">
+                        <Package size={13} className="text-ink-secondary flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-ink truncate">
+                            {inv ? itemDisplayName(inv) : recipe.inventory_item_id}
+                          </p>
+                          {inv?.unit && <p className="text-xs text-ink-secondary">{inv.unit}</p>}
+                        </div>
+                        <span className="text-sm font-semibold text-calipso tabular-nums flex-shrink-0">×{recipe.quantity}</span>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => openEdit(recipe)}
+                            className="p-1.5 text-ink-secondary hover:text-calipso hover:bg-calipso-50 rounded-input transition-colors"
+                            title="Editar"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            onClick={() => deleteRecipe(recipe.id).then(load)}
+                            className="p-1.5 text-ink-secondary hover:text-coral hover:bg-coral-light rounded-input transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
+          <div className="bg-white rounded-card shadow-brand-lg w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-calipso-100">
+              <BookOpen size={20} className="text-calipso flex-shrink-0" />
+              <span className="font-display font-semibold italic text-ink flex-1">
+                {editing ? 'Editar cantidad' : 'Agregar vínculo'}
+              </span>
+              <button onClick={() => setShowForm(false)} className="text-ink-secondary hover:text-ink p-1"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSave} className="px-5 py-5 space-y-4 font-body">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-ink-secondary block mb-1.5">Plato del menú *</label>
+                <select
+                  value={form.menu_item_id}
+                  onChange={e => setForm(f => ({ ...f, menu_item_id: e.target.value }))}
+                  disabled={!!editing}
+                  className="w-full border border-calipso-100 rounded-input px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-calipso disabled:opacity-60 disabled:bg-calipso-50"
+                >
+                  <option value="">Seleccionar plato…</option>
+                  {menuItems.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-ink-secondary block mb-1.5">Ingrediente *</label>
+                <select
+                  value={form.inventory_item_id}
+                  onChange={e => setForm(f => ({ ...f, inventory_item_id: e.target.value }))}
+                  disabled={!!editing}
+                  className="w-full border border-calipso-100 rounded-input px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-calipso disabled:opacity-60 disabled:bg-calipso-50"
+                >
+                  <option value="">Seleccionar ingrediente…</option>
+                  {inventory.map(i => (
+                    <option key={i.id} value={i.id}>
+                      {itemDisplayName(i)}{i.unit ? ` (${i.unit})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-ink-secondary block mb-1.5">
+                  Cantidad por porción *
+                  {selectedInv?.unit && <span className="ml-1 font-normal normal-case">({selectedInv.unit})</span>}
+                </label>
+                <input
+                  type="number"
+                  step="0.001"
+                  min="0.001"
+                  placeholder="0.15"
+                  value={form.quantity}
+                  onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
+                  className="w-full border border-calipso-100 rounded-input px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-calipso"
+                />
+              </div>
+              {formError && <p className="text-coral text-sm">{formError}</p>}
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="flex-1 border border-calipso-200 text-ink-secondary py-2.5 rounded-card text-sm font-medium hover:bg-calipso-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 bg-coral hover:bg-coral-hover text-white py-2.5 rounded-card text-sm font-semibold disabled:opacity-60 transition-colors"
+                >
+                  {saving ? 'Guardando…' : 'Guardar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-type MainTab = 'lista' | 'escanear'
+type MainTab = 'lista' | 'escanear' | 'recetas'
 
 export default function Inventory() {
   const [inventory, setInventory] = useState<InventoryItem[]>([])
@@ -1081,6 +1308,15 @@ export default function Inventory() {
           <ClipboardList size={14} /> Lista
         </button>
         <button
+          onClick={() => setTab('recetas')}
+          className={clsx(
+            'flex items-center gap-1.5 px-4 py-2 rounded-input text-sm font-semibold transition-all',
+            tab === 'recetas' ? 'bg-white text-ink shadow-brand' : 'text-ink-secondary hover:text-ink'
+          )}
+        >
+          <BookOpen size={14} /> Recetas
+        </button>
+        <button
           onClick={() => setTab('escanear')}
           className={clsx(
             'flex items-center gap-1.5 px-4 py-2 rounded-input text-sm font-semibold transition-all',
@@ -1094,6 +1330,8 @@ export default function Inventory() {
       {/* Tab content */}
       {tab === 'lista' ? (
         <ListaTab inventory={inventory} onSave={handleSave} saved={saved} error={error} />
+      ) : tab === 'recetas' ? (
+        <RecetasTab inventory={inventory} />
       ) : (
         <ScannerTab onUpdate={load} />
       )}

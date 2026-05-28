@@ -8,12 +8,12 @@ import {
   mockCategories, mockMenuItems, mockTables, mockReservations,
   mockInventory, mockOrders, mockOrderItems, mockHistoricalOrders,
   mockChatSessions, mockChatMessages, mockWaiters,
-  mockCustomers, mockCustomerVisits,
+  mockCustomers, mockCustomerVisits, mockRecipes,
 } from './mock-data'
 import type {
   Category, MenuItem, Table, Reservation, InventoryItem,
   Order, OrderItem, AppNotification, ChatSession, ChatMessage,
-  Waiter, Customer, CustomerVisit,
+  Waiter, Customer, CustomerVisit, Recipe,
 } from '../types'
 
 export const USE_MOCK = !import.meta.env.VITE_FIREBASE_PROJECT_ID
@@ -103,6 +103,15 @@ export async function upsertMenuItem(
 export async function deleteMenuItem(id: string): Promise<void> {
   if (USE_MOCK) throw new Error('Conecta Firebase para guardar datos')
   await deleteDoc(doc(db, 'menu_items', id))
+}
+
+export async function toggle86MenuItem(id: string, is_86d: boolean): Promise<void> {
+  if (USE_MOCK) {
+    const item = mockMenuItems.find(m => m.id === id)
+    if (item) item.is_86d = is_86d
+    return
+  }
+  await updateDoc(doc(db, 'menu_items', id), { is_86d, updated_at: new Date().toISOString() })
 }
 
 // ── Tables ────────────────────────────────────────────────────────────────────
@@ -443,17 +452,118 @@ export async function updateOrderStatus(orderId: string, status: Order['status']
   await updateDoc(doc(db, 'orders', orderId), { status, updated_at: new Date().toISOString() })
 }
 
-export async function closeOrder(orderId: string): Promise<void> {
+export async function closeOrder(orderId: string, paymentMethod?: string): Promise<void> {
   if (USE_MOCK) {
+    // Descontar inventario antes de mover la orden (los items aún están en mockOrderItems)
+    await _deductInventoryForOrder(orderId)
     const order = mockOrders.find(o => o.id === orderId)
     if (order) {
-      order.status = 'paid'; order.updated_at = new Date().toISOString()
+      order.status = 'paid'
+      order.updated_at = new Date().toISOString()
+      if (paymentMethod) order.payment_method = paymentMethod
       mockHistoricalOrders.push({ ...order })
       mockOrders.splice(mockOrders.indexOf(order), 1)
     }
     return
   }
-  await updateDoc(doc(db, 'orders', orderId), { status: 'paid', updated_at: new Date().toISOString() })
+  const data: Record<string, unknown> = { status: 'paid', updated_at: new Date().toISOString() }
+  if (paymentMethod) data.payment_method = paymentMethod
+  await updateDoc(doc(db, 'orders', orderId), data)
+  await _deductInventoryForOrder(orderId)
+}
+
+async function _deductInventoryForOrder(orderId: string): Promise<void> {
+  if (USE_MOCK) {
+    const orderItems = mockOrderItems.filter(i => i.order_id === orderId)
+    for (const oi of orderItems) {
+      const recipes = mockRecipes.filter(r => r.menu_item_id === oi.menu_item_id)
+      for (const recipe of recipes) {
+        const inv = mockInventory.find(i => i.id === recipe.inventory_item_id)
+        if (inv) {
+          inv.stock_quantity = Math.max(0, Math.round((inv.stock_quantity - recipe.quantity * oi.quantity) * 100) / 100)
+          inv.updated_at = new Date().toISOString()
+        }
+      }
+    }
+    return
+  }
+  const [itemsSnap, recipesSnap] = await Promise.all([
+    getDocs(query(collection(db, 'order_items'), where('order_id', '==', orderId))),
+    colDocs<Recipe>('recipes'),
+  ])
+  const orderItems = itemsSnap.docs.map(d => fromDoc<OrderItem>(d))
+  for (const oi of orderItems) {
+    const recipes = recipesSnap.filter(r => r.menu_item_id === oi.menu_item_id)
+    for (const recipe of recipes) {
+      const invDoc = await getDoc(doc(db, 'inventory', recipe.inventory_item_id))
+      if (invDoc.exists()) {
+        const inv = fromDoc<InventoryItem>(invDoc)
+        const newQty = Math.max(0, Math.round((inv.stock_quantity - recipe.quantity * oi.quantity) * 100) / 100)
+        await updateDoc(doc(db, 'inventory', recipe.inventory_item_id), {
+          stock_quantity: newQty, updated_at: new Date().toISOString(),
+        })
+      }
+    }
+  }
+}
+
+// ── Recipes ───────────────────────────────────────────────────────────────────
+
+export async function getRecipes(): Promise<Recipe[]> {
+  if (USE_MOCK) {
+    return mockRecipes.map(r => ({
+      ...r,
+      menu_item:      mockMenuItems.find(m => m.id === r.menu_item_id),
+      inventory_item: mockInventory.find(i => i.id === r.inventory_item_id),
+    }))
+  }
+  const [recipes, menuItems, inventory] = await Promise.all([
+    colDocs<Recipe>('recipes'),
+    colDocs<MenuItem>('menu_items'),
+    colDocs<InventoryItem>('inventory'),
+  ])
+  const itemMap = Object.fromEntries(menuItems.map(m => [m.id, m]))
+  const invMap  = Object.fromEntries(inventory.map(i => [i.id, i]))
+  return recipes.map(r => ({
+    ...r,
+    menu_item:      itemMap[r.menu_item_id],
+    inventory_item: invMap[r.inventory_item_id],
+  }))
+}
+
+export async function upsertRecipe(
+  recipe: Partial<Recipe> & { menu_item_id: string; inventory_item_id: string; quantity: number }
+): Promise<Recipe> {
+  if (USE_MOCK) {
+    const existing = recipe.id ? mockRecipes.find(r => r.id === recipe.id) : null
+    if (existing) {
+      Object.assign(existing, recipe)
+      return {
+        ...existing,
+        menu_item:      mockMenuItems.find(m => m.id === existing.menu_item_id),
+        inventory_item: mockInventory.find(i => i.id === existing.inventory_item_id),
+      }
+    }
+    const nr: Recipe = { id: `rec-${Date.now()}`, created_at: new Date().toISOString(), ...recipe }
+    mockRecipes.push(nr)
+    return {
+      ...nr,
+      menu_item:      mockMenuItems.find(m => m.id === nr.menu_item_id),
+      inventory_item: mockInventory.find(i => i.id === nr.inventory_item_id),
+    }
+  }
+  const payload = { ...recipe, created_at: recipe.created_at ?? new Date().toISOString() }
+  const id = await upsert('recipes', payload)
+  return { ...payload, id } as Recipe
+}
+
+export async function deleteRecipe(id: string): Promise<void> {
+  if (USE_MOCK) {
+    const idx = mockRecipes.findIndex(r => r.id === id)
+    if (idx >= 0) mockRecipes.splice(idx, 1)
+    return
+  }
+  await deleteDoc(doc(db, 'recipes', id))
 }
 
 // ── Notifications (computed from data) ────────────────────────────────────────

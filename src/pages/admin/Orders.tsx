@@ -13,6 +13,7 @@ import {
   RefreshCw, ExternalLink, Pencil, Ban, History,
   TableProperties, Banknote, Smartphone, Receipt, ArrowRight,
   ChevronDown, ChevronUp, Minus, BarChart2, TrendingUp, User2, Star, Zap, Eye,
+  Scissors, Users,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import clsx from 'clsx'
@@ -587,25 +588,37 @@ function POSGrid({ menuItems, frequentIds, existingItemIds, onAdd, onClose }: {
             const selBg    = catSelBg(slug)
             const already  = existingSet.has(item.id)   // ya está en la comanda
             const allergens = (item.allergens ?? []).filter(a => ALLERGEN_EMOJI[a])
+            const is86d    = item.is_86d === true
 
             return (
               <div key={item.id}>
                 {/* ── Tarjeta del plato ── */}
                 <button
-                  onClick={() => inc(item.id)}
+                  onClick={() => !is86d && inc(item.id)}
+                  disabled={is86d}
                   className={clsx(
-                    'relative w-full rounded-card border text-left transition-all active:scale-95 flex flex-col justify-between gap-1.5 overflow-hidden',
-                    sel ? 'shadow-brand-md' : 'border-gray-200 bg-white hover:border-gray-300 shadow-sm',
+                    'relative w-full rounded-card border text-left transition-all flex flex-col justify-between gap-1.5 overflow-hidden',
+                    is86d  ? 'opacity-50 cursor-not-allowed border-gray-200 bg-white shadow-sm'
+                           : sel ? 'shadow-brand-md active:scale-95' : 'border-gray-200 bg-white hover:border-gray-300 shadow-sm active:scale-95',
                   )}
                   style={{
                     minHeight: 120,
                     padding: '12px 12px 10px 14px',
-                    backgroundColor: sel ? selBg : undefined,
-                    borderColor:     sel ? color : undefined,
+                    backgroundColor: !is86d && sel ? selBg : undefined,
+                    borderColor:     !is86d && sel ? color : undefined,
                     borderLeftWidth: '4px',
-                    borderLeftColor: color,
+                    borderLeftColor: is86d ? '#D97706' : color,
                   }}
                 >
+                  {/* Overlay AGOTADO */}
+                  {is86d && (
+                    <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                      <span className="text-[11px] font-black uppercase tracking-widest text-amber-700 bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-full shadow-sm" style={{ transform: 'rotate(-8deg)' }}>
+                        AGOTADO
+                      </span>
+                    </div>
+                  )}
+
                   {/* Qty bubble */}
                   {qty > 0 && (
                     <span
@@ -617,7 +630,7 @@ function POSGrid({ menuItems, frequentIds, existingItemIds, onAdd, onClose }: {
                   )}
 
                   {/* Badge "ya en comanda" */}
-                  {already && qty === 0 && (
+                  {already && qty === 0 && !is86d && (
                     <span className="absolute top-2 right-2 text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full leading-none">
                       ya pedido
                     </span>
@@ -626,7 +639,7 @@ function POSGrid({ menuItems, frequentIds, existingItemIds, onAdd, onClose }: {
                   {/* Nombre */}
                   <p
                     className="text-base font-bold leading-tight pr-2"
-                    style={{ color: sel ? color : '#1a1a1a' }}
+                    style={{ color: is86d ? '#9CA3AF' : sel ? color : '#1a1a1a' }}
                   >
                     {item.name}
                   </p>
@@ -634,7 +647,7 @@ function POSGrid({ menuItems, frequentIds, existingItemIds, onAdd, onClose }: {
                   {/* Precio */}
                   <p
                     className="text-base font-semibold"
-                    style={{ color: sel ? color : '#666' }}
+                    style={{ color: is86d ? '#9CA3AF' : sel ? color : '#666' }}
                   >
                     {fmtCLP(item.price)}
                   </p>
@@ -852,6 +865,139 @@ function PaymentModal({ order, onConfirm, onClose }: {
   )
 }
 
+// ── SplitModal ────────────────────────────────────────────────────────────────
+
+function SplitModal({ order, onClose, onPay }: {
+  order: Order
+  onClose: () => void
+  onPay: () => void
+}) {
+  const [n, setN] = useState(2)
+  const perPerson = Math.ceil(order.total / n)
+
+  const handlePrint = () => {
+    const win = window.open('', '_blank', 'width=400,height=520,menubar=no,toolbar=no,location=no')
+    if (!win) return
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/>
+<title>División de cuenta — Mesa ${order.table?.number ?? '?'}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;padding:24px;color:#000;text-align:center}
+h2{font-size:18px;margin-bottom:6px}
+.sub{font-size:12px;color:#666;margin-bottom:20px}
+.total{font-size:28px;font-weight:bold;margin-bottom:8px}
+.divider{border-top:1px dashed #999;margin:16px 0}
+.per{font-size:36px;font-weight:bold;color:#1a1a1a}
+.per-label{font-size:13px;color:#555;margin-top:4px}
+.n{font-size:14px;color:#888;margin-top:12px}
+@media print{@page{margin:0.5cm}}</style>
+</head><body>
+<h2>Mesa ${order.table?.number ?? '?'} — División de cuenta</h2>
+<div class="sub">Garzón: ${order.waiter_name ?? '—'}</div>
+<div class="total">${fmtCLP(order.total)}</div>
+<div class="n">dividido entre ${n} personas</div>
+<div class="divider"></div>
+<div class="per">${fmtCLP(perPerson)}</div>
+<div class="per-label">por persona</div>
+<div class="divider"></div>
+<p style="font-size:11px;color:#999">Monto aproximado · Puede variar por redondeo</p>
+<script>window.onload=function(){window.print()}</script>
+</body></html>`)
+    win.document.close()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-card shadow-brand-lg w-full max-w-sm" onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-5 border-b border-calipso-100">
+          <Scissors size={22} className="text-calipso" />
+          <span className="font-display font-semibold text-ink italic text-xl flex-1">Dividir cuenta</span>
+          <button onClick={onClose} className="text-ink-secondary hover:text-ink p-1"><X size={24} /></button>
+        </div>
+
+        <div className="px-5 py-5 space-y-5">
+          {/* Total */}
+          <div className="bg-calipso-50 rounded-card px-4 py-3 flex items-center justify-between">
+            <span className="text-sm text-ink-secondary font-medium">Total de la mesa</span>
+            <span className="text-2xl font-bold text-ink tabular-nums">{fmtCLP(order.total)}</span>
+          </div>
+
+          {/* Selector de personas */}
+          <div>
+            <p className="text-sm font-bold uppercase tracking-wider text-ink-secondary mb-3">Número de personas</p>
+            <div className="flex items-center justify-center gap-5">
+              <button
+                onClick={() => setN(v => Math.max(1, v - 1))}
+                className="w-12 h-12 rounded-full border-2 border-calipso-100 text-calipso text-xl font-bold flex items-center justify-center hover:bg-calipso hover:text-white hover:border-calipso transition-colors"
+              >−</button>
+              <span className="text-4xl font-bold text-ink w-12 text-center tabular-nums">{n}</span>
+              <button
+                onClick={() => setN(v => Math.min(20, v + 1))}
+                className="w-12 h-12 rounded-full bg-calipso text-white text-xl font-bold flex items-center justify-center hover:bg-calipso-700 transition-colors"
+              >+</button>
+            </div>
+            <div className="flex justify-center gap-2 mt-3 flex-wrap">
+              {[2, 3, 4, 5, 6].map(num => (
+                <button
+                  key={num}
+                  onClick={() => setN(num)}
+                  className={clsx(
+                    'px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-colors',
+                    n === num ? 'border-calipso bg-calipso text-white' : 'border-calipso-100 text-ink-secondary hover:border-calipso/40'
+                  )}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Resultado */}
+          <div className="bg-[#D4EDDA] rounded-card px-5 py-5 text-center">
+            <p className="text-sm text-[#3B6D11] font-semibold mb-1">{n} personas · cada una paga</p>
+            <p className="text-4xl font-bold text-[#3B6D11] tabular-nums">{fmtCLP(perPerson)}</p>
+            {order.total % n !== 0 && (
+              <p className="text-xs text-[#3B6D11]/70 mt-1">* redondeado al peso más cercano</p>
+            )}
+          </div>
+
+          {/* Propinas sugeridas */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-ink-secondary mb-2">Propina sugerida (por persona)</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[10, 15, 20].map(pct => (
+                <div key={pct} className="bg-calipso-50 rounded-input p-2.5 text-center">
+                  <p className="text-xs text-ink-secondary">{pct}%</p>
+                  <p className="text-sm font-bold text-ink tabular-nums">
+                    {fmtCLP(Math.ceil((order.total * pct / 100) / n))}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 pb-5 space-y-2.5">
+          <button
+            onClick={handlePrint}
+            className="w-full flex items-center justify-center gap-2 border-2 border-calipso text-calipso font-bold py-3 rounded-input text-sm hover:bg-calipso hover:text-white transition-colors"
+          >
+            Imprimir resumen de división
+          </button>
+          <button
+            onClick={onPay}
+            className="w-full flex items-center justify-center gap-2.5 bg-[#3B6D11] text-white font-bold py-4 rounded-input text-lg transition-colors hover:bg-[#2D5509]"
+          >
+            <CreditCard size={20} /> Cobrar mesa
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── OrderPanel ────────────────────────────────────────────────────────────────
 
 function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }: {
@@ -859,6 +1005,7 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
 }) {
   const [showAdd,        setShowAdd]        = useState(false)
   const [showPayment,    setShowPayment]    = useState(false)
+  const [showSplit,      setShowSplit]      = useState(false)
   const [showCancel,     setShowCancel]     = useState(false)
   const [showPreview,    setShowPreview]    = useState(false)
   const [editNotes,      setEditNotes]      = useState(false)
@@ -974,10 +1121,7 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
     })
 
   const handlePayment = async (method: string) => {
-    await wrap('pay', async () => {
-      await closeOrder(order.id)
-      void method
-    })
+    await wrap('pay', () => closeOrder(order.id, method))
     setShowPayment(false)
   }
 
@@ -1219,6 +1363,16 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
           </button>
         )}
 
+        {/* ── Botón: Dividir cuenta */}
+        {items.length > 0 && order.total > 0 && (
+          <button
+            onClick={() => setShowSplit(true)}
+            className="w-full flex items-center justify-center gap-2 border-2 border-calipso-100 text-ink-secondary text-base font-semibold px-4 py-3 rounded-input hover:bg-calipso-50 hover:border-calipso hover:text-calipso transition-colors"
+          >
+            <Scissors size={17} /> Dividir cuenta
+          </button>
+        )}
+
         {/* ── Botón: Cobrar (grande, destacado) */}
         {(allDelivered || readyCount > 0) && !hasPending && (
           <button
@@ -1267,6 +1421,9 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
       {showPayment && (
         <PaymentModal order={order} onConfirm={handlePayment} onClose={() => setShowPayment(false)} />
       )}
+      {showSplit && (
+        <SplitModal order={order} onClose={() => setShowSplit(false)} onPay={() => { setShowSplit(false); setShowPayment(true) }} />
+      )}
       {showPreview && (
         <ComandaPreview
           order={order}
@@ -1297,92 +1454,147 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
 
 // ── Order history ─────────────────────────────────────────────────────────────
 
+const PM_BADGE: Record<string, string> = {
+  efectivo:      'bg-[#D4EDDA] text-[#3B6D11]',
+  debito:        'bg-calipso-50 text-calipso',
+  credito:       'bg-purple-50 text-purple-700',
+  transferencia: 'bg-amber-50 text-amber-700',
+}
+const PM_LABEL: Record<string, string> = {
+  efectivo: 'Efectivo', debito: 'Débito', credito: 'Crédito', transferencia: 'Transferencia',
+}
+
 function OrderHistoryView({ orders }: { orders: Order[] }) {
-  const today = todayStr()
+  const [selectedDate,   setSelectedDate]   = useState(todayStr())
+  const [selectedWaiter, setSelectedWaiter] = useState('todos')
+  const [expanded, setExpanded] = useState<string | null>(null)
+
+  const allWaiters = Array.from(new Set(
+    orders.filter(o => o.waiter_name).map(o => o.waiter_name as string)
+  )).sort()
+
   const closed = orders
-    .filter(o => (o.status === 'paid' || o.status === 'cancelled') &&
-      o.updated_at?.startsWith(today))
+    .filter(o =>
+      (o.status === 'paid' || o.status === 'cancelled') &&
+      o.updated_at?.startsWith(selectedDate) &&
+      (selectedWaiter === 'todos' || o.waiter_name === selectedWaiter)
+    )
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
 
   const totalRevenue = closed
     .filter(o => o.status === 'paid')
     .reduce((s, o) => s + o.total, 0)
 
-  const [expanded, setExpanded] = useState<string | null>(null)
-
-  if (closed.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 text-center p-8">
-        <History size={40} className="text-calipso/30 mb-4" />
-        <p className="font-display italic text-xl text-ink">Sin comandas cerradas hoy</p>
-        <p className="text-base text-ink-secondary mt-1">Las comandas cobradas o canceladas aparecerán aquí.</p>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-4">
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Cobradas',       value: closed.filter(o => o.status === 'paid').length,      color: 'text-[#3B6D11]' },
-          { label: 'Canceladas',     value: closed.filter(o => o.status === 'cancelled').length,  color: 'text-coral' },
-          { label: 'Total recaudado',value: fmtCLP(totalRevenue),                                 color: 'text-calipso' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="bg-white rounded-card p-4 shadow-brand text-center">
-            <p className={clsx('text-2xl font-bold tabular-nums', color)}>{value}</p>
-            <p className="text-sm text-ink-secondary mt-1">{label}</p>
+      {/* Filters */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-bold uppercase tracking-wider text-ink-secondary">Fecha</label>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={e => setSelectedDate(e.target.value)}
+            className="border border-calipso-100 rounded-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-calipso"
+          />
+        </div>
+        {allWaiters.length > 0 && (
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-ink-secondary">Garzón</label>
+            <select
+              value={selectedWaiter}
+              onChange={e => setSelectedWaiter(e.target.value)}
+              className="border border-calipso-100 rounded-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-calipso"
+            >
+              <option value="todos">Todos</option>
+              {allWaiters.map(w => <option key={w} value={w}>{w}</option>)}
+            </select>
           </div>
-        ))}
+        )}
       </div>
 
-      {/* List */}
-      <div className="bg-white rounded-card shadow-brand overflow-hidden">
-        {closed.map((order, idx) => {
-          const isExpanded = expanded === order.id
-          const items = order.items ?? []
-          return (
-            <div key={order.id} className={clsx('border-b border-calipso-50 last:border-0', idx === 0 && '')}>
-              <button
-                onClick={() => setExpanded(isExpanded ? null : order.id)}
-                className="w-full flex items-center gap-3 px-5 py-4 hover:bg-calipso-50 transition-colors text-left"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-ink text-base">Mesa {order.table?.number ?? '—'}</span>
-                    <span className={clsx(
-                      'text-sm font-bold px-2.5 py-0.5 rounded-full',
-                      STATUS_CFG[order.status].badge
-                    )}>
-                      {STATUS_CFG[order.status].label}
-                    </span>
-                  </div>
-                  <p className="text-sm text-ink-secondary mt-0.5">
-                    {items.length} ítem{items.length !== 1 ? 's' : ''} ·{' '}
-                    {new Date(order.updated_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
-                    {order.notes && <span className="ml-2 italic">· {order.notes}</span>}
-                  </p>
-                </div>
-                <span className="font-bold text-ink tabular-nums text-base flex-shrink-0">
-                  {fmtCLP(order.total)}
-                </span>
-                {isExpanded ? <ChevronUp size={16} className="text-ink-secondary flex-shrink-0" /> : <ChevronDown size={16} className="text-ink-secondary flex-shrink-0" />}
-              </button>
+      {closed.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-64 text-center p-8">
+          <History size={40} className="text-calipso/30 mb-4" />
+          <p className="font-display italic text-xl text-ink">Sin comandas cerradas</p>
+          <p className="text-base text-ink-secondary mt-1">No hay comandas cobradas o canceladas para este filtro.</p>
+        </div>
+      ) : (
+        <>
+          {/* Summary */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: 'Cobradas',       value: closed.filter(o => o.status === 'paid').length,      color: 'text-[#3B6D11]' },
+              { label: 'Canceladas',     value: closed.filter(o => o.status === 'cancelled').length,  color: 'text-coral' },
+              { label: 'Total recaudado',value: fmtCLP(totalRevenue),                                 color: 'text-calipso' },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="bg-white rounded-card p-4 shadow-brand text-center">
+                <p className={clsx('text-2xl font-bold tabular-nums', color)}>{value}</p>
+                <p className="text-sm text-ink-secondary mt-1">{label}</p>
+              </div>
+            ))}
+          </div>
 
-              {isExpanded && (
-                <div className="px-5 pb-4 space-y-1.5 bg-calipso-50/40">
-                  {items.map(item => (
-                    <div key={item.id} className="flex justify-between text-sm text-ink-secondary">
-                      <span>{item.menu_item?.name ?? '—'} ×{item.quantity}{item.notes && <span className="italic ml-1 text-amber-600">({item.notes})</span>}</span>
-                      <span className="tabular-nums">{fmtCLP(item.unit_price * item.quantity)}</span>
+          {/* List */}
+          <div className="bg-white rounded-card shadow-brand overflow-hidden">
+            {closed.map(order => {
+              const isExpanded = expanded === order.id
+              const items = order.items ?? []
+              return (
+                <div key={order.id} className="border-b border-calipso-50 last:border-0">
+                  <button
+                    onClick={() => setExpanded(isExpanded ? null : order.id)}
+                    className="w-full flex items-center gap-3 px-5 py-4 hover:bg-calipso-50 transition-colors text-left"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-ink text-base">Mesa {order.table?.number ?? '—'}</span>
+                        <span className={clsx(
+                          'text-xs font-bold px-2.5 py-0.5 rounded-full',
+                          STATUS_CFG[order.status].badge
+                        )}>
+                          {STATUS_CFG[order.status].label}
+                        </span>
+                        {order.payment_method && (
+                          <span className={clsx(
+                            'text-xs font-bold px-2 py-0.5 rounded-full',
+                            PM_BADGE[order.payment_method] ?? 'bg-calipso-50 text-calipso'
+                          )}>
+                            {PM_LABEL[order.payment_method] ?? order.payment_method}
+                          </span>
+                        )}
+                        {order.waiter_name && selectedWaiter === 'todos' && (
+                          <span className="text-xs text-ink-secondary font-medium">{order.waiter_name}</span>
+                        )}
+                      </div>
+                      <p className="text-sm text-ink-secondary mt-0.5">
+                        {items.length} ítem{items.length !== 1 ? 's' : ''} ·{' '}
+                        {new Date(order.updated_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+                        {order.notes && <span className="ml-2 italic">· {order.notes}</span>}
+                      </p>
                     </div>
-                  ))}
+                    <span className="font-bold text-ink tabular-nums text-base flex-shrink-0">
+                      {fmtCLP(order.total)}
+                    </span>
+                    {isExpanded ? <ChevronUp size={16} className="text-ink-secondary flex-shrink-0" /> : <ChevronDown size={16} className="text-ink-secondary flex-shrink-0" />}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="px-5 pb-4 space-y-1.5 bg-calipso-50/40">
+                      {items.map(item => (
+                        <div key={item.id} className="flex justify-between text-sm text-ink-secondary">
+                          <span>{item.menu_item?.name ?? '—'} ×{item.quantity}{item.notes && <span className="italic ml-1 text-amber-600">({item.notes})</span>}</span>
+                          <span className="tabular-nums">{fmtCLP(item.unit_price * item.quantity)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -1576,6 +1788,162 @@ function DishRegistry({ orders }: { orders: Order[] }) {
   )
 }
 
+// ── WaiterStats ───────────────────────────────────────────────────────────────
+
+type WaiterStat = {
+  name: string
+  ordersCount: number
+  revenue: number
+  avgTicket: number
+  topDishName: string
+  topDishQty: number
+}
+
+function WaiterStats({ orders }: { orders: Order[] }) {
+  const [period, setPeriod] = useState<'hoy' | 'todo'>('hoy')
+  const today = todayStr()
+
+  const relevant = (
+    period === 'hoy'
+      ? orders.filter(o => o.updated_at?.startsWith(today) || o.created_at.startsWith(today))
+      : orders
+  ).filter(o => o.status === 'paid')
+
+  const statsMap = new Map<string, { wo: Order[]; dishCounts: Map<string, { name: string; qty: number }> }>()
+  for (const order of relevant) {
+    const name = order.waiter_name ?? 'Sin asignar'
+    if (!statsMap.has(name)) statsMap.set(name, { wo: [], dishCounts: new Map() })
+    const entry = statsMap.get(name)!
+    entry.wo.push(order)
+    for (const item of (order.items ?? [])) {
+      const prev = entry.dishCounts.get(item.menu_item_id)
+      entry.dishCounts.set(item.menu_item_id, {
+        name: item.menu_item?.name ?? item.menu_item_id,
+        qty: (prev?.qty ?? 0) + item.quantity,
+      })
+    }
+  }
+
+  const stats: WaiterStat[] = [...statsMap.entries()]
+    .map(([name, { wo, dishCounts }]) => {
+      const revenue = wo.reduce((s, o) => s + o.total, 0)
+      const topDish = [...dishCounts.values()].sort((a, b) => b.qty - a.qty)[0]
+      return {
+        name,
+        ordersCount: wo.length,
+        revenue,
+        avgTicket: wo.length > 0 ? Math.round(revenue / wo.length) : 0,
+        topDishName: topDish?.name ?? '—',
+        topDishQty:  topDish?.qty  ?? 0,
+      }
+    })
+    .sort((a, b) => b.revenue - a.revenue)
+
+  const totalRevenue = stats.reduce((s, w) => s + w.revenue, 0)
+  const totalOrders  = stats.reduce((s, w) => s + w.ordersCount, 0)
+  const maxRevenue   = stats[0]?.revenue ?? 1
+
+  return (
+    <div className="space-y-4">
+      {/* Period selector */}
+      <div className="flex rounded-input border border-calipso-100 overflow-hidden w-fit">
+        {(['hoy', 'todo'] as const).map(p => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            className={clsx(
+              'px-5 py-2.5 text-sm font-bold transition-colors',
+              period === p ? 'bg-calipso text-white' : 'text-ink-secondary hover:bg-calipso-50'
+            )}
+          >
+            {p === 'hoy' ? 'Hoy' : 'Todo el período'}
+          </button>
+        ))}
+      </div>
+
+      {/* Summary */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white rounded-card p-4 shadow-brand text-center">
+          <p className="text-2xl font-bold tabular-nums text-calipso">{totalOrders}</p>
+          <p className="text-sm text-ink-secondary mt-1">Comandas cobradas</p>
+        </div>
+        <div className="bg-white rounded-card p-4 shadow-brand text-center">
+          <p className="text-2xl font-bold tabular-nums text-[#3B6D11]">{fmtCLP(totalRevenue)}</p>
+          <p className="text-sm text-ink-secondary mt-1">Total recaudado</p>
+        </div>
+      </div>
+
+      {stats.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <Users size={40} className="text-calipso/30 mb-4" />
+          <p className="font-display italic text-xl text-ink">Sin datos para el período</p>
+          <p className="text-base text-ink-secondary mt-1">Las estadísticas por garzón aparecerán aquí.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {stats.map((waiter, idx) => {
+            const barPct = Math.round(waiter.revenue / maxRevenue * 100)
+            const rankColor =
+              idx === 0 ? 'text-amber-500' :
+              idx === 1 ? 'text-zinc-400'  :
+              idx === 2 ? 'text-orange-400' :
+              'text-ink/25'
+            return (
+              <div key={waiter.name} className="bg-white rounded-card shadow-brand overflow-hidden">
+                <div className="px-5 py-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className={clsx('text-2xl font-black tabular-nums w-7 text-center', rankColor)}>
+                        {idx + 1}
+                      </span>
+                      <div className="w-10 h-10 rounded-full bg-calipso-50 flex items-center justify-center flex-shrink-0">
+                        <span className="text-calipso text-sm font-bold">
+                          {waiter.name.split(' ').map(p => p[0]).slice(0, 2).join('')}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-base font-bold text-ink">{waiter.name}</p>
+                        <p className="text-xs text-ink-secondary">
+                          {waiter.ordersCount} comanda{waiter.ordersCount !== 1 ? 's' : ''} · ticket prom. {fmtCLP(waiter.avgTicket)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xl font-bold text-ink tabular-nums">{fmtCLP(waiter.revenue)}</p>
+                      <p className="text-xs text-ink-secondary mt-0.5">ingreso total</p>
+                    </div>
+                  </div>
+
+                  {/* Revenue bar */}
+                  <div className="mt-3">
+                    <div className="h-2 bg-calipso-100 rounded-full overflow-hidden">
+                      <div
+                        className={clsx(
+                          'h-full rounded-full transition-all duration-500',
+                          idx === 0 ? 'bg-amber-400' : 'bg-calipso/70'
+                        )}
+                        style={{ width: `${barPct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Top dish */}
+                  {waiter.topDishName !== '—' && (
+                    <div className="mt-3 flex items-center gap-1.5 text-sm text-ink-secondary">
+                      <Star size={12} className="text-amber-400 fill-amber-300 flex-shrink-0" />
+                      <span>Plato top: <span className="font-semibold text-ink">{waiter.topDishName}</span> ×{waiter.topDishQty}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function Orders() {
@@ -1585,7 +1953,7 @@ export default function Orders() {
   const [menuItems,      setMenuItems]      = useState<MenuItem[]>([])
   const [waiters,        setWaiters]        = useState<Waiter[]>([])
   const [selectedTable,  setSelectedTable]  = useState<string | null>(null)
-  const [view,           setView]           = useState<'mesas' | 'historial' | 'registro'>('mesas')
+  const [view,           setView]           = useState<'mesas' | 'historial' | 'registro' | 'garzones'>('mesas')
   const [loading,        setLoading]        = useState(true)
   const [countdown,      setCountdown]      = useState(30)
   const countRef = useRef(30)
@@ -1711,13 +2079,14 @@ export default function Orders() {
       {/* ── View tabs ────────────────────────────────────────── */}
       <div className="flex gap-1 mb-4 border-b border-calipso-100 flex-shrink-0">
         {[
-          { id: 'mesas',     label: 'Mesas',             Icon: TableProperties },
-          { id: 'historial', label: 'Historial del día',  Icon: History },
-          { id: 'registro',  label: 'Registro de platos', Icon: BarChart2 },
+          { id: 'mesas',     label: 'Mesas',    Icon: TableProperties },
+          { id: 'historial', label: 'Historial', Icon: History },
+          { id: 'registro',  label: 'Platos',   Icon: BarChart2 },
+          { id: 'garzones',  label: 'Garzones', Icon: Users },
         ].map(({ id, label, Icon }) => (
           <button
             key={id}
-            onClick={() => setView(id as 'mesas' | 'historial' | 'registro')}
+            onClick={() => setView(id as 'mesas' | 'historial' | 'registro' | 'garzones')}
             className={clsx(
               'flex items-center gap-2 px-5 py-3.5 text-base font-bold border-b-2 -mb-px transition-colors',
               view === id
@@ -1738,6 +2107,10 @@ export default function Orders() {
       ) : view === 'registro' ? (
         <div className="flex-1 overflow-y-auto">
           <DishRegistry orders={allOrders} />
+        </div>
+      ) : view === 'garzones' ? (
+        <div className="flex-1 overflow-y-auto">
+          <WaiterStats orders={allOrders} />
         </div>
       ) : (
         <div className="flex gap-4 flex-1 min-h-0">

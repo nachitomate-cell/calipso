@@ -18,6 +18,7 @@ export interface MenuItem {
   image_url: string | null
   is_available: boolean
   is_featured: boolean
+  is_86d?: boolean          // agotado hoy (temporal, distinto de is_available)
   allergens: string[]
   sort_order: number
   created_at: string
@@ -83,6 +84,7 @@ export interface Order {
   notes: string | null
   total: number
   waiter_name: string | null
+  payment_method?: string   // 'efectivo' | 'debito' | 'credito' | 'transferencia'
   created_at: string
   updated_at: string
   table?: Table
@@ -143,6 +145,16 @@ export interface Customer {
   created_at: string
   updated_at: string
   favorite_dish?: MenuItem
+}
+
+export interface Recipe {
+  id: string
+  menu_item_id: string
+  inventory_item_id: string
+  quantity: number          // cantidad de inventario por 1 porción del plato
+  created_at: string
+  menu_item?: MenuItem
+  inventory_item?: InventoryItem
 }
 
 export interface CustomerVisit {

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
-import { getAllMenuItems, getAllCategories, upsertMenuItem, deleteMenuItem, deleteCategory } from '../../lib/api'
+import { getAllMenuItems, getAllCategories, upsertMenuItem, deleteMenuItem, deleteCategory, toggle86MenuItem } from '../../lib/api'
 import type { MenuItem, Category } from '../../types'
 import { PageLoader } from '../../components/ui/LoadingSpinner'
 import Modal from '../../components/ui/Modal'
 import Badge from '../../components/ui/Badge'
 import { Input, TextArea, Select } from '../../components/ui/Input'
 import ImageUpload from '../../components/ui/ImageUpload'
-import { Plus, Pencil, Trash2, Eye, EyeOff, Star } from 'lucide-react'
+import { Plus, Pencil, Trash2, Eye, EyeOff, Star, Ban, RotateCcw } from 'lucide-react'
 import clsx from 'clsx'
 
 function formatPrice(p: number) {
@@ -110,14 +110,22 @@ export default function MenuAdmin() {
                 </div>
                 <div className="divide-y divide-calipso/5">
                   {catItems.map(item => (
-                    <div key={item.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-calipso-50/50 transition-colors">
+                    <div key={item.id} className={clsx(
+                      'flex items-center gap-4 px-5 py-3.5 hover:bg-calipso-50/50 transition-colors',
+                      item.is_86d && 'bg-amber-50/60'
+                    )}>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-ink text-sm">{item.name}</span>
+                          <span className={clsx('font-medium text-sm', item.is_86d ? 'text-amber-700 line-through' : 'text-ink')}>{item.name}</span>
                           {item.is_featured && <Star size={12} className="text-calipso fill-calipso/30" />}
                           <Badge variant={item.is_available ? 'available' : 'unavailable'}>
                             {item.is_available ? 'Disponible' : 'Sin stock'}
                           </Badge>
+                          {item.is_86d && (
+                            <span className="text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                              86'd — Agotado hoy
+                            </span>
+                          )}
                         </div>
                         {item.description && (
                           <p className="text-ink-secondary text-xs mt-0.5 truncate max-w-md">{item.description}</p>
@@ -127,6 +135,18 @@ export default function MenuAdmin() {
                         {formatPrice(item.price)}
                       </span>
                       <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => toggle86MenuItem(item.id, !item.is_86d).then(load)}
+                          className={clsx(
+                            'p-1.5 rounded-input transition-colors text-xs font-bold',
+                            item.is_86d
+                              ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                              : 'text-ink-secondary hover:text-amber-600 hover:bg-amber-50'
+                          )}
+                          title={item.is_86d ? 'Restablecer disponibilidad' : 'Marcar como agotado hoy (86)'}
+                        >
+                          {item.is_86d ? <RotateCcw size={13} /> : <Ban size={13} />}
+                        </button>
                         <button
                           onClick={() => openItemModal(item)}
                           className="p-1.5 text-ink-secondary hover:text-calipso hover:bg-calipso-50 rounded-input transition-colors"

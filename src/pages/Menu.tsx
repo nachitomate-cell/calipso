@@ -81,7 +81,7 @@ function DishRow({ item }: { item: MenuItem }) {
         background: featured
           ? hovered ? '#EEF9FC' : '#F5FBFD'
           : hovered ? '#F5F0E6' : PAPER,
-        opacity: item.is_available ? 1 : 0.42,
+        opacity: (item.is_available && !item.is_86d) ? 1 : 0.42,
         transition: 'background 200ms ease, box-shadow 200ms ease',
         boxShadow: featured
           ? `inset 3px 0 0 ${CALIPSO}`
@@ -177,9 +177,24 @@ function DishRow({ item }: { item: MenuItem }) {
           )}
 
           {/* Badges row */}
-          {(item.allergens.length > 0 || !item.is_available) && (
+          {(item.allergens.length > 0 || !item.is_available || item.is_86d) && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
-              {!item.is_available && (
+              {item.is_86d && (
+                <span style={{
+                  fontFamily: sans,
+                  fontSize: '11.5px',
+                  fontWeight: 600,
+                  letterSpacing: '0.05em',
+                  padding: '3px 10px',
+                  borderRadius: '99px',
+                  border: '1px solid rgba(186,117,23,0.35)',
+                  background: 'rgba(186,117,23,0.08)',
+                  color: '#854F0B',
+                }}>
+                  Agotado hoy
+                </span>
+              )}
+              {!item.is_available && !item.is_86d && (
                 <span style={{
                   fontFamily: sans,
                   fontSize: '11.5px',

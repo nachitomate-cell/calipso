@@ -19,6 +19,9 @@ import Notifications from './pages/admin/Notifications'
 import Chat from './pages/admin/Chat'
 import Garzones from './pages/admin/Garzones'
 import Customers from './pages/admin/Customers'
+import QRCodes from './pages/admin/QRCodes'
+import CierreCaja from './pages/admin/CierreCaja'
+import Exportar from './pages/admin/Exportar'
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -44,6 +47,9 @@ function AdminRoutes() {
       <Route path="chat" element={<Chat />} />
       <Route path="garzones" element={<Garzones />} />
       <Route path="clientes" element={<Customers />} />
+      <Route path="qr" element={<QRCodes />} />
+      <Route path="caja" element={<CierreCaja />} />
+      <Route path="exportar" element={<Exportar />} />
     </Routes>
   )
 }

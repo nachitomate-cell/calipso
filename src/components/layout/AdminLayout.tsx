@@ -5,7 +5,7 @@ import { auth } from '../../lib/firebase'
 import {
   LayoutDashboard, UtensilsCrossed, Table2, CalendarDays,
   Package, LogOut, Menu, X, ChevronRight,
-  ClipboardList, ChefHat, BarChart2, Bell, MessageCircle, Users, BookUser,
+  ClipboardList, ChefHat, BarChart2, Bell, MessageCircle, Users, BookUser, QrCode, Wallet, Download,
 } from 'lucide-react'
 import Logo from '../ui/Logo'
 import clsx from 'clsx'
@@ -17,6 +17,7 @@ const navGroups = [
     items: [
       { to: '/admin',           label: 'Dashboard',   icon: LayoutDashboard, exact: true },
       { to: '/admin/comandas',  label: 'Comandas',    icon: ClipboardList },
+      { to: '/admin/caja',      label: 'Cierre de Caja', icon: Wallet },
       { to: '/admin/reservas',  label: 'Reservas',    icon: CalendarDays },
       { to: '/admin/mesas',     label: 'Mesas',       icon: Table2 },
       { to: '/admin/chat',      label: 'Chat',        icon: MessageCircle },
@@ -29,12 +30,14 @@ const navGroups = [
     items: [
       { to: '/admin/carta',      label: 'Carta',       icon: UtensilsCrossed },
       { to: '/admin/inventario', label: 'Inventario',  icon: Package },
+      { to: '/admin/qr',         label: 'Códigos QR',  icon: QrCode },
     ],
   },
   {
     label: 'Análisis',
     items: [
       { to: '/admin/reportes',       label: 'Reportes',        icon: BarChart2 },
+      { to: '/admin/exportar',       label: 'Exportar datos',  icon: Download },
       { to: '/admin/notificaciones', label: 'Notificaciones',  icon: Bell },
     ],
   },

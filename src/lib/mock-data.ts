@@ -1,4 +1,4 @@
-import type { Category, MenuItem, Table, Reservation, InventoryItem, Order, OrderItem, ChatSession, ChatMessage, Waiter, Customer, CustomerVisit } from '../types'
+import type { Category, MenuItem, Table, Reservation, InventoryItem, Order, OrderItem, ChatSession, ChatMessage, Waiter, Customer, CustomerVisit, Recipe } from '../types'
 
 // Helper: date offset from today
 function daysFromNow(n: number): string {
@@ -321,6 +321,22 @@ export const mockOrders: Order[] = [
 
 // ── Historical paid orders (last 30 days, for reports) ────────────────────────
 
+// ── Recipes (recetas — linkea platos a ingredientes de inventario) ────────────
+
+export const mockRecipes: Recipe[] = [
+  { id: 'rec-1', menu_item_id: '5',  inventory_item_id: 'inv-5',  quantity: 0.15, created_at: '' }, // Ceviche Clásico → 0.15 kg corvina
+  { id: 'rec-2', menu_item_id: '7',  inventory_item_id: 'inv-7',  quantity: 0.20, created_at: '' }, // Ceviche Mixto → 0.20 kg mix
+  { id: 'rec-3', menu_item_id: '8',  inventory_item_id: 'inv-8',  quantity: 0.20, created_at: '' }, // Congrio → 0.20 kg filete
+  { id: 'rec-4', menu_item_id: '9',  inventory_item_id: 'inv-9',  quantity: 1,    created_at: '' }, // Langosta → 1 unidad
+  { id: 'rec-5', menu_item_id: '12', inventory_item_id: 'inv-12', quantity: 1,    created_at: '' }, // Arroz Meloso → 1 porción
+  { id: 'rec-6', menu_item_id: '13', inventory_item_id: 'inv-13', quantity: 1,    created_at: '' }, // Risotto → 1 porción
+  { id: 'rec-7', menu_item_id: '2',  inventory_item_id: 'inv-2',  quantity: 0.25, created_at: '' }, // Pulpo → 0.25 kg
+  { id: 'rec-8', menu_item_id: '17', inventory_item_id: 'inv-17', quantity: 1,    created_at: '' }, // Pisco Sour → 1 porción
+  { id: 'rec-9', menu_item_id: '18', inventory_item_id: 'inv-18', quantity: 1,    created_at: '' }, // Vino Blanco → 1 botella
+]
+
+const _PM_CYCLE = ['efectivo', 'debito', 'credito', 'transferencia', 'efectivo', 'debito', 'credito', 'efectivo']
+
 function buildHistoricalOrders(): Order[] {
   const seed: [number, number, string][] = [
     // [daysAgo, total, tableId]
@@ -348,6 +364,7 @@ function buildHistoricalOrders(): Order[] {
       status: 'paid',
       notes: null,
       waiter_name: mockWaiters[i % mockWaiters.length]?.name ?? null,
+      payment_method: _PM_CYCLE[i % _PM_CYCLE.length],
       total,
       created_at: d.toISOString(),
       updated_at: d.toISOString(),
