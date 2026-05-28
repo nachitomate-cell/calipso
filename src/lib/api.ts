@@ -225,23 +225,36 @@ export async function upsertInventoryItem(
 // ── Orders ────────────────────────────────────────────────────────────────────
 
 function hydrateOrdersMock(orders: Order[]): Order[] {
+  const catMap = Object.fromEntries(mockCategories.map(c => [c.id, c]))
   return orders.map(ord => ({
     ...ord,
     table: mockTables.find(t => t.id === ord.table_id),
     items: mockOrderItems
       .filter(i => i.order_id === ord.id)
-      .map(i => ({ ...i, menu_item: mockMenuItems.find(m => m.id === i.menu_item_id) })),
+      .map(i => {
+        const menuItem = mockMenuItems.find(m => m.id === i.menu_item_id)
+        return {
+          ...i,
+          menu_item: menuItem
+            ? { ...menuItem, category: catMap[menuItem.category_id] }
+            : undefined,
+        }
+      }),
   }))
 }
 
 async function hydrateOrders(orders: Order[]): Promise<Order[]> {
-  const [tables, items, menuItems] = await Promise.all([
+  const [tables, items, menuItems, categories] = await Promise.all([
     colDocs<Table>('tables'),
     colDocs<OrderItem>('order_items'),
     colDocs<MenuItem>('menu_items'),
+    colDocs<Category>('categories'),
   ])
   const tableMap = Object.fromEntries(tables.map(t => [t.id, t]))
-  const itemMap  = Object.fromEntries(menuItems.map(m => [m.id, m]))
+  const catMap   = Object.fromEntries(categories.map(c => [c.id, c]))
+  const itemMap  = Object.fromEntries(
+    menuItems.map(m => [m.id, { ...m, category: catMap[m.category_id] }])
+  )
   return orders.map(ord => ({
     ...ord,
     table: ord.table_id ? tableMap[ord.table_id] : undefined,
