@@ -384,12 +384,13 @@ function ScannerTab({ onUpdate }: { onUpdate: () => void }) {
   }, [])
 
   const stopCamera = () => {
-    if (scanIntervalRef.current) clearInterval(scanIntervalRef.current)
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop())
-      streamRef.current = null
-    }
+    if (scanIntervalRef.current) { clearInterval(scanIntervalRef.current); scanIntervalRef.current = null }
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
+    // ZXing controls cleanup (.stop exists on IScannerControls)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((detectorRef.current as any)?.stop) { try { (detectorRef.current as any).stop() } catch { /* ignore */ } }
     detectorRef.current = null
+    if (videoRef.current) videoRef.current.srcObject = null
     setCameraActive(false)
   }
 
@@ -503,46 +504,74 @@ function ScannerTab({ onUpdate }: { onUpdate: () => void }) {
 
   const startCamera = async () => {
     setCameraError(null)
-    // Check BarcodeDetector support
-    if (!('BarcodeDetector' in window)) {
-      setCameraError('Tu navegador no soporta escaneo por cámara. Usa Chrome o Edge en Android/PC.')
+
+    // Requiere contexto seguro (HTTPS o localhost)
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('La cámara no está disponible. Asegúrate de usar HTTPS.')
       return
     }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const detector = new (window as any).BarcodeDetector({
-        formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'qr_code', 'upc_a', 'upc_e'],
-      })
-      detectorRef.current = detector
-      setCameraActive(true)
 
-      scanIntervalRef.current = setInterval(async () => {
-        if (!videoRef.current || !detectorRef.current) return
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const barcodes = await detectorRef.current.detect(videoRef.current)
-          if (barcodes.length > 0) {
-            const code: string = barcodes[0].rawValue
+    const hasNativeDetector = 'BarcodeDetector' in window
+
+    try {
+      if (hasNativeDetector) {
+        // ── Ruta nativa: BarcodeDetector (Chrome/Edge desktop y Android) ──
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        })
+        streamRef.current = stream
+        if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play() }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const detector = new (window as any).BarcodeDetector({
+          formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'qr_code', 'upc_a', 'upc_e'],
+        })
+        detectorRef.current = detector
+        setCameraActive(true)
+
+        scanIntervalRef.current = setInterval(async () => {
+          if (!videoRef.current || !detectorRef.current) return
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const barcodes = await (detectorRef.current as any).detect(videoRef.current)
+            if (barcodes.length > 0) {
+              const code: string = barcodes[0].rawValue
+              stopCamera(); setBarcodeValue(code); await handleSearch(code)
+            }
+          } catch { /* ignore frame errors */ }
+        }, 250)
+
+      } else {
+        // ── Ruta ZXing: fallback para Safari, Firefox, Chrome en iOS ──
+        // Carga lazy para no inflar el bundle principal
+        const { BrowserMultiFormatReader } = await import('@zxing/browser')
+        const reader = new BrowserMultiFormatReader()
+        setCameraActive(true)
+
+        // decodeFromVideoDevice gestiona la cámara internamente
+        const controls = await reader.decodeFromVideoDevice(
+          undefined,          // undefined → cámara trasera por defecto
+          videoRef.current!,
+          (result, _err) => {
+            if (!result) return   // cada frame sin código llega como error — ignorar
+            const code = result.getText()
             stopCamera()
             setBarcodeValue(code)
-            await handleSearch(code)
+            handleSearch(code)
           }
-        } catch { /* ignore detection errors */ }
-      }, 250)
-    } catch (e) {
-      if (e instanceof Error && e.name === 'NotAllowedError') {
-        setCameraError('Acceso a la cámara denegado. Habilítalo en la configuración del navegador.')
-      } else {
-        setCameraError('No se pudo acceder a la cámara.')
+        )
+        detectorRef.current = controls   // IScannerControls — se limpia con .stop()
       }
+    } catch (e) {
+      const name = e instanceof Error ? e.name : ''
+      if (name === 'NotAllowedError') {
+        setCameraError('Acceso a la cámara denegado. Habilítalo en Ajustes del navegador.')
+      } else if (name === 'NotFoundError') {
+        setCameraError('No se detectó cámara en este dispositivo.')
+      } else {
+        setCameraError('No se pudo iniciar la cámara.')
+      }
+      setCameraActive(false)
     }
   }
 
