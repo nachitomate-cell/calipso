@@ -66,83 +66,104 @@ const PAYMENT_METHODS = [
 
 // ── Kitchen ticket ────────────────────────────────────────────────────────────
 
-function buildTicketHTML(order: Order, table: Table, pendingItems: OrderItem[], waiterName?: string): string {
-  const now     = new Date()
-  const hora    = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
-  const fecha   = now.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  const loc     = LOC_LABEL[table.location] ?? table.location
+// Código de ubicación para el número de mesa (ej: 1 + Interior → "1C")
+const LOC_CODE: Record<Table['location'], string> = {
+  interior: 'C',
+  terraza:  'T',
+  barra:    'B',
+}
 
-  const itemsHTML = pendingItems.map(item => `
-    <div class="item">
-      <div class="item-row">
-        <span class="qty">${item.quantity}</span>
-        <span class="name">${item.menu_item?.name ?? item.menu_item_id}</span>
-      </div>
-      ${item.notes ? `<div class="note">➔ ${item.notes}</div>` : ''}
-    </div>
-  `).join('')
+// Mapeo slug de categoría → sección de comanda
+const SLUG_TO_SECTION: Record<string, string> = {
+  entradas: 'Entrada',
+  ceviches: 'Entrada',
+  fondos:   'Principal',
+  arroces:  'Principal',
+  postres:  'Postre',
+  bebidas:  'Agregado',
+}
+const SECTION_ORDER = ['Entrada', 'Principal', 'Agregado', 'Postre']
+
+function buildTicketHTML(order: Order, table: Table, pendingItems: OrderItem[], waiterName?: string): string {
+  const now  = new Date()
+  const pad  = (n: number) => String(n).padStart(2, '0')
+  const dt   = `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()} ` +
+               `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+
+  const mesaCode = `${table.number}${LOC_CODE[table.location] ?? ''}`
+  const waiter   = waiterName ?? order.waiter_name ?? ''
+
+  // Agrupar ítems por sección
+  const grouped: Record<string, OrderItem[]> = {}
+  SECTION_ORDER.forEach(s => { grouped[s] = [] })
+  pendingItems.forEach(item => {
+    const slug    = item.menu_item?.category?.slug ?? ''
+    const section = SLUG_TO_SECTION[slug] ?? 'Agregado'
+    grouped[section].push(item)
+  })
+
+  // HTML de cada sección (siempre se muestra aunque esté vacía)
+  const sectionsHTML = SECTION_ORDER.map(section => {
+    const items = grouped[section]
+    const itemsHTML = items.map(item => `
+      <div class="item">
+        <div class="item-row">
+          <span class="qty">${item.quantity}</span>
+          <span class="name">${item.menu_item?.name ?? item.menu_item_id}</span>
+        </div>
+        ${item.notes ? `<div class="note">${item.notes}</div>` : ''}
+      </div>`).join('')
+    return `<div class="section-label">${section}:</div>${itemsHTML}<div class="sep-short"></div>`
+  }).join('\n')
 
   const noteHTML = order.notes
-    ? `<div class="sep-dash"></div><div class="order-note">📌 ${order.notes}</div>`
+    ? `<div class="sep-full"></div><div class="order-note">&#128204; ${order.notes}</div>`
     : ''
 
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Comanda Mesa ${table.number}</title>
+<title>Mesa N\xb0 ${mesaCode}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
-    font-family: 'Courier New', Courier, monospace;
+    font-family: Arial, Helvetica, sans-serif;
     width: 80mm;
-    padding: 4mm 4mm 10mm;
+    padding: 5mm 4mm 12mm;
     color: #000;
     font-size: 13px;
+    line-height: 1.4;
   }
-  .center  { text-align: center; }
-  .right   { text-align: right; }
-  .bold    { font-weight: bold; }
-
-  /* Header */
-  .brand   { font-size: 22px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase; }
-  .sub     { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; margin-top: 1px; }
 
   /* Separadores */
-  .sep-solid { border-top: 2px solid #000; margin: 5px 0; }
-  .sep-dash  { border-top: 1px dashed #000; margin: 5px 0; }
+  .sep-full  { border: none; border-top: 1.5px solid #555; margin: 5px 0; }
+  .sep-short { border: none; border-top: 1px solid #888; width: 65%; margin: 4px 0 6px; }
 
-  /* Meta */
-  .meta      { display: flex; justify-content: space-between; align-items: flex-end; padding: 4px 0; }
-  .label     { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #555; }
-  .mesa-num  { font-size: 36px; font-weight: 900; line-height: 1; }
-  .loc       { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
-  .time-big  { font-size: 24px; font-weight: 900; line-height: 1; }
+  /* Cabecera mesa */
+  .mesa-row   { display: flex; justify-content: space-between; align-items: baseline; padding: 2px 0 4px; }
+  .mesa-label { font-size: 14px; font-weight: bold; }
+  .mesa-num   { font-size: 14px; font-weight: bold; }
 
-  /* Título cocina */
-  .cocina-title {
-    font-size: 11px; font-weight: bold; letter-spacing: 3px;
-    text-transform: uppercase; text-align: center;
-    background: #000; color: #fff;
-    padding: 3px 0; margin: 4px 0;
-  }
+  /* Garzón */
+  .garzon-label { font-weight: bold; font-size: 13px; }
+  .garzon-name  { font-size: 13px; margin: 1px 0 3px; }
 
-  /* Items */
-  .item      { margin: 6px 0; }
-  .item-row  { display: flex; align-items: baseline; gap: 6px; }
-  .qty       { font-size: 20px; font-weight: 900; min-width: 28px; flex-shrink: 0; line-height: 1.1; }
-  .name      { font-size: 15px; font-weight: bold; flex: 1; line-height: 1.2; }
-  .note      { padding-left: 34px; font-size: 11px; font-style: italic; margin-top: 1px; }
+  /* Fecha/hora */
+  .datetime { font-size: 12px; padding: 3px 0 4px; }
 
-  /* Garzon */
-  .garzon     { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 2px 0; color: #555; }
-  .garzon b   { color: #000; font-size: 13px; }
+  /* Secciones */
+  .section-label { font-weight: bold; font-size: 13px; margin-top: 2px; }
 
-  /* Order note */
+  /* Ítems */
+  .item      { margin: 2px 0 2px 2px; }
+  .item-row  { display: flex; align-items: baseline; gap: 5px; }
+  .qty       { font-size: 13px; min-width: 14px; flex-shrink: 0; }
+  .name      { font-size: 13px; }
+  .note      { font-size: 11px; font-style: italic; padding-left: 19px; color: #333; }
+
+  /* Nota de comanda */
   .order-note { font-size: 12px; font-style: italic; padding: 3px 0; }
-
-  /* Footer */
-  .footer    { margin-top: 8px; font-size: 9px; color: #888; text-align: center; }
 
   @media print {
     body  { width: 80mm; }
@@ -152,35 +173,21 @@ function buildTicketHTML(order: Order, table: Table, pendingItems: OrderItem[], 
 </head>
 <body>
 
-<div class="center">
-  <div class="brand">Calipso</div>
-  <div class="sub">Cocina de Mar &mdash; Concón</div>
+<div class="mesa-row">
+  <span class="mesa-label">Mesa N\xb0 :</span>
+  <span class="mesa-num">${mesaCode}</span>
 </div>
+<div class="sep-full"></div>
 
-<div class="sep-solid"></div>
+<div class="garzon-label">Garz\xf3n :</div>
+<div class="garzon-name">${waiter}</div>
+<div class="sep-full"></div>
 
-<div class="meta">
-  <div>
-    <div class="label">Mesa</div>
-    <div class="mesa-num">${table.number}</div>
-    <div class="loc">${loc}</div>
-  </div>
-  <div class="right">
-    <div class="label">${fecha}</div>
-    <div class="time-big">${hora}</div>
-  </div>
-</div>
+<div class="datetime">${dt}</div>
+<div class="sep-full"></div>
 
-<div class="cocina-title">— COCINA —</div>
-
-${(waiterName ?? order.waiter_name) ? `<div class="garzon">Garzon: <b>${waiterName ?? order.waiter_name}</b></div>` : ''}
-
-${itemsHTML}
-
+${sectionsHTML}
 ${noteHTML}
-
-<div class="sep-solid"></div>
-<div class="footer">Calipso Concón &bull; Sistema interno</div>
 
 <script>
   window.onload = function() {
