@@ -83,6 +83,43 @@ const SLUG_TO_SECTION: Record<string, string> = {
 // Mismo orden que el sistema antiguo
 const SECTION_ORDER = ['Entrada', 'Principal', 'Agregado', 'Tragos - Vinos', 'Postre']
 
+// ── Helpers visuales del POSGrid ──────────────────────────────────────────────
+
+/** Color de acento por categoría (borde izquierdo de la tarjeta) */
+function catColor(slug: string | undefined): string {
+  const MAP: Record<string, string> = {
+    entradas: '#29B5D0', ceviches: '#29B5D0',
+    fondos:   '#E8593C',
+    arroces:  '#D97706',
+    postres:  '#9333EA',
+    bebidas:  '#3B6D11',
+  }
+  return MAP[slug ?? ''] ?? '#29B5D0'
+}
+
+/** Fondo de tarjeta seleccionada por categoría */
+function catSelBg(slug: string | undefined): string {
+  const MAP: Record<string, string> = {
+    entradas: '#EBF8FB', ceviches: '#EBF8FB',
+    fondos:   '#FEF0ED',
+    arroces:  '#FFFBEB',
+    postres:  '#F5F3FF',
+    bebidas:  '#D4EDDA',
+  }
+  return MAP[slug ?? ''] ?? '#EBF8FB'
+}
+
+/** Emojis de alérgenos para mostrar en la tarjeta */
+const ALLERGEN_EMOJI: Record<string, string> = {
+  pescado: '🐟', moluscos: '🦑', crustaceos: '🦐',
+  gluten: '🌾', lacteos: '🥛', nueces: '🥜', huevos: '🥚', soja: '🫘',
+}
+
+const ALLERGEN_LABEL: Record<string, string> = {
+  pescado: 'Pescado', moluscos: 'Moluscos', crustaceos: 'Crustáceos',
+  gluten: 'Gluten', lacteos: 'Lácteos', nueces: 'Frutos secos', huevos: 'Huevos', soja: 'Soja',
+}
+
 function buildTicketHTML(order: Order, table: Table, pendingItems: OrderItem[], waiterName?: string): string {
   const now  = new Date()
   const pad  = (n: number) => String(n).padStart(2, '0')
@@ -404,21 +441,24 @@ function TableCard({ table, order, selected, onClick, onQuickSend }: {
 
 type CartEntry = { qty: number; notes: string }
 
-function POSGrid({ menuItems, frequentIds, onAdd, onClose }: {
+function POSGrid({ menuItems, frequentIds, existingItemIds, onAdd, onClose }: {
   menuItems: MenuItem[]
   frequentIds: string[]
+  existingItemIds: string[]         // platos ya en la comanda (cualquier estado)
   onAdd: (items: { itemId: string; qty: number; notes: string }[]) => Promise<void>
   onClose: () => void
 }) {
-  const available = menuItems.filter(i => i.is_available)
-  const categories = Array.from(new Set(available.map(i => i.category?.name ?? 'Otros')))
-  const hasFav = frequentIds.length > 0
-  const TABS = hasFav ? ['⭐ Frecuentes', ...categories] : categories
+  const available   = menuItems.filter(i => i.is_available)
+  const categories  = Array.from(new Set(available.map(i => i.category?.name ?? 'Otros')))
+  const hasFav      = frequentIds.length > 0
+  const TABS        = hasFav ? ['⭐ Frecuentes', ...categories] : categories
+  const existingSet = new Set(existingItemIds)
 
-  const [activeTab, setActiveTab] = useState(TABS[0] ?? '')
-  const [cart,      setCart]      = useState<Map<string, CartEntry>>(new Map())
-  const [noteFor,   setNoteFor]   = useState<string | null>(null)
-  const [saving,    setSaving]    = useState(false)
+  const [activeTab,   setActiveTab] = useState(TABS[0] ?? '')
+  const [cart,        setCart]      = useState<Map<string, CartEntry>>(new Map())
+  const [noteFor,     setNoteFor]   = useState<string | null>(null)
+  const [saving,      setSaving]    = useState(false)
+  const [showCart,    setShowCart]  = useState(false)
 
   const tabItems: MenuItem[] = activeTab === '⭐ Frecuentes'
     ? frequentIds.map(id => available.find(i => i.id === id)).filter(Boolean) as MenuItem[]
@@ -428,6 +468,11 @@ function POSGrid({ menuItems, frequentIds, onAdd, onClose }: {
   const totalPrice = Array.from(cart.entries()).reduce((s, [id, { qty }]) => {
     return s + (available.find(i => i.id === id)?.price ?? 0) * qty
   }, 0)
+
+  const cartList = [...cart.entries()]
+    .filter(([, v]) => v.qty > 0)
+    .map(([id, entry]) => ({ id, item: available.find(i => i.id === id), ...entry }))
+    .filter(r => r.item)
 
   const inc = (id: string) =>
     setCart(c => { const m = new Map(c); const p = m.get(id); m.set(id, { qty: (p?.qty ?? 0) + 1, notes: p?.notes ?? '' }); return m })
@@ -439,11 +484,14 @@ function POSGrid({ menuItems, frequentIds, onAdd, onClose }: {
   const handleConfirm = async () => {
     setSaving(true)
     try {
-      const items = [...cart.entries()].filter(([, v]) => v.qty > 0).map(([itemId, { qty, notes }]) => ({ itemId, qty, notes }))
+      const items = cartList.map(({ id, qty, notes }) => ({ itemId: id, qty, notes }))
       await onAdd(items)
       onClose()
     } finally { setSaving(false) }
   }
+
+  // Slug de categoría activa (para colorear la tab activa)
+  const activeSlug = tabItems[0]?.category?.slug
 
   return (
     <div className="fixed inset-0 bg-ink/70 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
@@ -452,75 +500,162 @@ function POSGrid({ menuItems, frequentIds, onAdd, onClose }: {
         style={{ height: '92dvh' }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* ── Header ── */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-calipso-100 flex-shrink-0">
           <UtensilsCrossed size={20} className="text-calipso flex-shrink-0" />
           <span className="font-display font-semibold text-ink italic flex-1 text-lg">Agregar platos</span>
           {totalQty > 0 && (
-            <span className="bg-calipso text-white text-sm font-bold px-3 py-1 rounded-full tabular-nums">
+            <button
+              onClick={() => setShowCart(v => !v)}
+              className="flex items-center gap-1.5 bg-calipso text-white text-sm font-bold px-3 py-1.5 rounded-full tabular-nums hover:bg-calipso-700 transition-colors"
+            >
               {totalQty} · {fmtCLP(totalPrice)}
-            </span>
+              <ChevronDown size={13} className={clsx('transition-transform', showCart && 'rotate-180')} />
+            </button>
           )}
           <button onClick={onClose} className="text-ink-secondary hover:text-ink p-2 ml-1">
             <X size={24} />
           </button>
         </div>
 
-        {/* Category tabs */}
+        {/* ── Resumen del carrito (desplegable) ── */}
+        {showCart && totalQty > 0 && (
+          <div className="border-b border-calipso-100 bg-calipso-50/60 px-4 py-3 flex-shrink-0 space-y-1.5">
+            <p className="text-xs font-bold uppercase tracking-widest text-ink-secondary mb-2">Revisión del pedido</p>
+            {cartList.map(({ id, item, qty, notes }) => (
+              <div key={id} className="flex items-center gap-3 bg-white rounded-input px-3 py-2.5 shadow-sm">
+                {/* Qty badge */}
+                <span
+                  className="w-8 h-8 rounded-full text-white text-sm font-bold flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: catColor(item?.category?.slug) }}
+                >
+                  {qty}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-bold text-ink truncate">{item?.name}</p>
+                  {notes && <p className="text-xs text-amber-700 italic truncate">📝 {notes}</p>}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-sm font-semibold text-ink-secondary tabular-nums">
+                    {fmtCLP((item?.price ?? 0) * qty)}
+                  </span>
+                  <button
+                    onClick={() => { for (let i = 0; i < qty; i++) dec(id) }}
+                    className="w-8 h-8 rounded-full border-2 border-coral/40 text-coral flex items-center justify-center hover:bg-coral-light"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Tabs de categoría (coloreadas) ── */}
         <div className="flex overflow-x-auto scrollbar-hide gap-2 px-4 py-3 border-b border-calipso-100 flex-shrink-0">
-          {TABS.map(tab => (
-            <button
-              key={tab}
-              onClick={() => { setActiveTab(tab); setNoteFor(null) }}
-              className={clsx(
-                'flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-bold transition-colors whitespace-nowrap flex items-center gap-1.5',
-                activeTab === tab
-                  ? 'bg-calipso text-white shadow-brand'
-                  : 'bg-calipso-50 text-ink-secondary hover:bg-calipso-100'
-              )}
-            >
-              {tab === '⭐ Frecuentes' && <Star size={12} className="fill-current" />}
-              {tab === '⭐ Frecuentes' ? 'Frecuentes' : tab}
-            </button>
-          ))}
+          {TABS.map(tab => {
+            const isFav    = tab === '⭐ Frecuentes'
+            const slug     = isFav ? undefined : available.find(i => i.category?.name === tab)?.category?.slug
+            const isActive = activeTab === tab
+            const color    = catColor(slug)
+            return (
+              <button
+                key={tab}
+                onClick={() => { setActiveTab(tab); setNoteFor(null); setShowCart(false) }}
+                className={clsx(
+                  'flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap flex items-center gap-1.5 border-2',
+                  isActive ? 'text-white shadow-brand border-transparent' : 'bg-white text-ink-secondary hover:bg-gray-50 border-gray-100',
+                )}
+                style={isActive ? { backgroundColor: color, borderColor: color } : {}}
+              >
+                {isFav && <Star size={12} className="fill-current" />}
+                {isFav ? 'Frecuentes' : tab}
+              </button>
+            )
+          })}
         </div>
 
-        {/* Items grid — toque = +1 */}
+        {/* ── Grid de platos ── */}
         <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 gap-3 content-start">
           {tabItems.map(item => {
-            const entry = cart.get(item.id)
-            const qty   = entry?.qty ?? 0
-            const notes = entry?.notes ?? ''
-            const sel   = qty > 0
+            const entry    = cart.get(item.id)
+            const qty      = entry?.qty ?? 0
+            const notes    = entry?.notes ?? ''
+            const sel      = qty > 0
+            const slug     = item.category?.slug
+            const color    = catColor(slug)
+            const selBg    = catSelBg(slug)
+            const already  = existingSet.has(item.id)   // ya está en la comanda
+            const allergens = (item.allergens ?? []).filter(a => ALLERGEN_EMOJI[a])
 
             return (
               <div key={item.id}>
-                {/* Main tap target */}
+                {/* ── Tarjeta del plato ── */}
                 <button
                   onClick={() => inc(item.id)}
                   className={clsx(
-                    'relative w-full rounded-card border-2 p-4 text-left transition-all active:scale-95 flex flex-col justify-between gap-2',
-                    sel
-                      ? 'border-calipso bg-calipso-50 shadow-brand'
-                      : 'border-calipso-100 bg-white hover:border-calipso/40',
+                    'relative w-full rounded-card border text-left transition-all active:scale-95 flex flex-col justify-between gap-1.5 overflow-hidden',
+                    sel ? 'shadow-brand-md' : 'border-gray-200 bg-white hover:border-gray-300 shadow-sm',
                   )}
-                  style={{ minHeight: 110 }}
+                  style={{
+                    minHeight: 120,
+                    padding: '12px 12px 10px 14px',
+                    backgroundColor: sel ? selBg : undefined,
+                    borderColor:     sel ? color : undefined,
+                    borderLeftWidth: '4px',
+                    borderLeftColor: color,
+                  }}
                 >
                   {/* Qty bubble */}
                   {qty > 0 && (
-                    <span className="absolute -top-3 -right-3 w-8 h-8 bg-calipso text-white text-sm font-bold rounded-full flex items-center justify-center shadow-brand leading-none">
+                    <span
+                      className="absolute -top-1 -right-1 min-w-[28px] h-7 px-1.5 text-white text-sm font-bold rounded-full flex items-center justify-center shadow leading-none"
+                      style={{ backgroundColor: color }}
+                    >
                       {qty}
                     </span>
                   )}
-                  <p className={clsx('text-base font-bold leading-tight', sel ? 'text-calipso-700' : 'text-ink')}>
+
+                  {/* Badge "ya en comanda" */}
+                  {already && qty === 0 && (
+                    <span className="absolute top-2 right-2 text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full leading-none">
+                      ya pedido
+                    </span>
+                  )}
+
+                  {/* Nombre */}
+                  <p
+                    className="text-base font-bold leading-tight pr-2"
+                    style={{ color: sel ? color : '#1a1a1a' }}
+                  >
                     {item.name}
                   </p>
-                  <p className={clsx('text-base font-semibold', sel ? 'text-calipso' : 'text-ink-secondary')}>
+
+                  {/* Precio */}
+                  <p
+                    className="text-base font-semibold"
+                    style={{ color: sel ? color : '#666' }}
+                  >
                     {fmtCLP(item.price)}
                   </p>
+
+                  {/* Alérgenos */}
+                  {allergens.length > 0 && (
+                    <div className="flex gap-1 flex-wrap mt-0.5">
+                      {allergens.map(a => (
+                        <span
+                          key={a}
+                          title={ALLERGEN_LABEL[a]}
+                          className="text-[11px] bg-black/5 rounded px-1 py-0.5 leading-none"
+                        >
+                          {ALLERGEN_EMOJI[a]}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </button>
 
-                {/* Controls row — visible when selected */}
+                {/* Controles (visibles cuando está seleccionado) */}
                 {sel && (
                   <div className="flex items-center gap-1.5 mt-2 px-0.5">
                     <button
@@ -532,10 +667,10 @@ function POSGrid({ menuItems, frequentIds, onAdd, onClose }: {
                     <button
                       onClick={() => setNoteFor(noteFor === item.id ? null : item.id)}
                       className={clsx(
-                        'flex-1 text-sm rounded-input px-2 py-2 text-left truncate transition-colors',
+                        'flex-1 text-sm rounded-input px-2 py-2.5 text-left truncate transition-colors border',
                         notes
-                          ? 'text-amber-700 bg-amber-50 font-medium'
-                          : 'text-ink-secondary hover:bg-calipso-50'
+                          ? 'text-amber-700 bg-amber-50 font-medium border-amber-200'
+                          : 'text-ink-secondary bg-white hover:bg-calipso-50 border-gray-100'
                       )}
                     >
                       {notes ? `📝 ${notes}` : '+ nota cocina'}
@@ -543,7 +678,7 @@ function POSGrid({ menuItems, frequentIds, onAdd, onClose }: {
                   </div>
                 )}
 
-                {/* Inline note input */}
+                {/* Input de nota inline */}
                 {sel && noteFor === item.id && (
                   <input
                     autoFocus
@@ -566,22 +701,37 @@ function POSGrid({ menuItems, frequentIds, onAdd, onClose }: {
           )}
         </div>
 
-        {/* Footer CTA */}
-        <div className="border-t border-calipso-100 px-4 py-4 flex-shrink-0 bg-calipso-50" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
-          <button
-            onClick={handleConfirm}
-            disabled={totalQty === 0 || saving}
-            className="w-full flex items-center justify-center gap-2 bg-calipso disabled:bg-calipso/40 text-white font-bold py-5 rounded-input text-lg transition-colors"
-          >
-            {saving
-              ? <RefreshCw size={20} className="animate-spin" />
-              : <Send size={20} />
-            }
-            {totalQty > 0
-              ? `Agregar ${totalQty} ítem${totalQty !== 1 ? 's' : ''} · ${fmtCLP(totalPrice)}`
-              : 'Selecciona platos'
-            }
-          </button>
+        {/* ── Footer: leyenda alérgenos + CTA ── */}
+        <div className="border-t border-calipso-100 flex-shrink-0 bg-white" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
+          {/* Leyenda de alérgenos (solo si hay platos con alérgenos en la tab activa) */}
+          {tabItems.some(i => (i.allergens ?? []).length > 0) && (
+            <div className="px-4 pt-3 pb-1 flex flex-wrap gap-2">
+              {Array.from(new Set(tabItems.flatMap(i => i.allergens ?? []).filter(a => ALLERGEN_EMOJI[a]))).map(a => (
+                <span key={a} className="text-xs text-ink-secondary flex items-center gap-1">
+                  {ALLERGEN_EMOJI[a]} {ALLERGEN_LABEL[a]}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Botón confirmar */}
+          <div className="px-4 pb-4 pt-3">
+            <button
+              onClick={handleConfirm}
+              disabled={totalQty === 0 || saving}
+              className="w-full flex items-center justify-center gap-2 text-white font-bold py-5 rounded-input text-lg transition-colors disabled:opacity-40"
+              style={{ backgroundColor: totalQty > 0 ? catColor(activeSlug) : '#29B5D0' }}
+            >
+              {saving
+                ? <RefreshCw size={20} className="animate-spin" />
+                : <Send size={20} />
+              }
+              {totalQty > 0
+                ? `Agregar ${totalQty} ítem${totalQty !== 1 ? 's' : ''} · ${fmtCLP(totalPrice)}`
+                : 'Selecciona platos'
+              }
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1106,7 +1256,13 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
       </div>
 
       {showAdd && (
-        <POSGrid menuItems={menuItems} frequentIds={frequentIds} onAdd={handleAddItems} onClose={() => setShowAdd(false)} />
+        <POSGrid
+          menuItems={menuItems}
+          frequentIds={frequentIds}
+          existingItemIds={items.map(i => i.menu_item_id)}
+          onAdd={handleAddItems}
+          onClose={() => setShowAdd(false)}
+        />
       )}
       {showPayment && (
         <PaymentModal order={order} onConfirm={handlePayment} onClose={() => setShowPayment(false)} />
