@@ -136,7 +136,13 @@ export async function deleteTable(id: string): Promise<void> {
 // ── Reservations ──────────────────────────────────────────────────────────────
 
 export async function getReservations(): Promise<Reservation[]> {
-  if (USE_MOCK) return mockReservations
+  if (USE_MOCK) {
+    // Hydrate table object from mockTables
+    const tableMap = Object.fromEntries(mockTables.map(t => [t.id, t]))
+    return mockReservations
+      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+      .map(r => ({ ...r, table: r.table_id ? tableMap[r.table_id] : undefined }))
+  }
   const [resos, tables] = await Promise.all([
     colDocs<Reservation>('reservations'),
     colDocs<Table>('tables'),
@@ -167,6 +173,18 @@ export async function updateReservationStatus(id: string, status: Reservation['s
     return
   }
   await updateDoc(doc(db, 'reservations', id), { status })
+}
+
+export async function updateReservation(
+  id: string,
+  data: Partial<Pick<Reservation, 'status' | 'table_id'>>
+): Promise<void> {
+  if (USE_MOCK) {
+    const r = mockReservations.find(r => r.id === id)
+    if (r) Object.assign(r, data)
+    return
+  }
+  await updateDoc(doc(db, 'reservations', id), data)
 }
 
 // ── Inventory ─────────────────────────────────────────────────────────────────

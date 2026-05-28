@@ -44,6 +44,7 @@ export interface Reservation {
   date: string
   time: string
   notes: string | null
+  sector?: 'terraza' | 'comedor' | null   // preferencia de sector del cliente
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
   created_at: string
   table?: Table
