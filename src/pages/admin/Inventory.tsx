@@ -385,12 +385,9 @@ function ScannerTab({ onUpdate }: { onUpdate: () => void }) {
 
   const stopCamera = () => {
     if (scanIntervalRef.current) { clearInterval(scanIntervalRef.current); scanIntervalRef.current = null }
-    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
-    // ZXing controls cleanup (.stop exists on IScannerControls)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((detectorRef.current as any)?.stop) { try { (detectorRef.current as any).stop() } catch { /* ignore */ } }
+    if (streamRef.current)       { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
     detectorRef.current = null
-    if (videoRef.current) videoRef.current.srcObject = null
+    if (videoRef.current)        { videoRef.current.srcObject = null }
     setCameraActive(false)
   }
 
@@ -505,29 +502,40 @@ function ScannerTab({ onUpdate }: { onUpdate: () => void }) {
   const startCamera = async () => {
     setCameraError(null)
 
-    // Requiere contexto seguro (HTTPS o localhost)
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError('La cámara no está disponible. Asegúrate de usar HTTPS.')
       return
     }
 
-    const hasNativeDetector = 'BarcodeDetector' in window
-
     try {
-      if (hasNativeDetector) {
-        // ── Ruta nativa: BarcodeDetector (Chrome/Edge desktop y Android) ──
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-        })
-        streamRef.current = stream
-        if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play() }
+      // ── 1. Obtener stream (mismo para ambas rutas) ────────────────────────────
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      })
+      streamRef.current = stream
 
+      // ── 2. Adjuntar al <video> — siempre en DOM gracias al hidden/visible CSS ──
+      const video = videoRef.current!
+      video.srcObject = stream
+      video.setAttribute('playsinline', '')   // iOS Safari requiere este atributo
+      video.muted = true
+
+      // Esperar loadedmetadata antes de play() — obligatorio en iOS Safari
+      await new Promise<void>(resolve => {
+        if (video.readyState >= 2) { video.play().catch(() => {}); resolve(); return }
+        video.onloadedmetadata = () => { video.play().catch(() => {}); resolve() }
+        setTimeout(resolve, 3000)   // fallback por si el evento no dispara
+      })
+
+      setCameraActive(true)
+
+      // ── 3a. Ruta nativa: BarcodeDetector (Chrome/Edge desktop y Android) ──────
+      if ('BarcodeDetector' in window) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const detector = new (window as any).BarcodeDetector({
           formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'qr_code', 'upc_a', 'upc_e'],
         })
         detectorRef.current = detector
-        setCameraActive(true)
 
         scanIntervalRef.current = setInterval(async () => {
           if (!videoRef.current || !detectorRef.current) return
@@ -538,30 +546,36 @@ function ScannerTab({ onUpdate }: { onUpdate: () => void }) {
               const code: string = barcodes[0].rawValue
               stopCamera(); setBarcodeValue(code); await handleSearch(code)
             }
-          } catch { /* ignore frame errors */ }
+          } catch { /* frame vacío */ }
         }, 250)
 
       } else {
-        // ── Ruta ZXing: fallback para Safari, Firefox, Chrome en iOS ──
-        // Carga lazy para no inflar el bundle principal
-        const { BrowserMultiFormatReader } = await import('@zxing/browser')
-        const reader = new BrowserMultiFormatReader()
-        setCameraActive(true)
+        // ── 3b. Ruta ZXing: Safari, Firefox, Chrome en iOS ────────────────────
+        // ZXing solo decodifica frames de canvas — NO gestiona el stream
+        const [{ HTMLCanvasElementLuminanceSource }, { MultiFormatReader, BinaryBitmap, HybridBinarizer }]
+          = await Promise.all([import('@zxing/browser'), import('@zxing/library')])
 
-        // decodeFromVideoDevice gestiona la cámara internamente
-        const controls = await reader.decodeFromVideoDevice(
-          undefined,          // undefined → cámara trasera por defecto
-          videoRef.current!,
-          (result, _err) => {
-            if (!result) return   // cada frame sin código llega como error — ignorar
-            const code = result.getText()
-            stopCamera()
-            setBarcodeValue(code)
-            handleSearch(code)
-          }
-        )
-        detectorRef.current = controls   // IScannerControls — se limpia con .stop()
+        const zxReader = new MultiFormatReader()
+        const canvas   = document.createElement('canvas')
+        const ctx      = canvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D
+        detectorRef.current = zxReader
+
+        scanIntervalRef.current = setInterval(() => {
+          const v = videoRef.current
+          if (!v || v.readyState < 2 || !v.videoWidth) return
+          canvas.width  = v.videoWidth
+          canvas.height = v.videoHeight
+          ctx.drawImage(v, 0, 0, canvas.width, canvas.height)
+          try {
+            const luminance = new HTMLCanvasElementLuminanceSource(canvas)
+            const bitmap    = new BinaryBitmap(new HybridBinarizer(luminance))
+            const result    = zxReader.decode(bitmap)
+            const code      = result.getText()
+            stopCamera(); setBarcodeValue(code); handleSearch(code)
+          } catch { /* sin código en este frame */ }
+        }, 300)
       }
+
     } catch (e) {
       const name = e instanceof Error ? e.name : ''
       if (name === 'NotAllowedError') {
@@ -571,7 +585,7 @@ function ScannerTab({ onUpdate }: { onUpdate: () => void }) {
       } else {
         setCameraError('No se pudo iniciar la cámara.')
       }
-      setCameraActive(false)
+      stopCamera()
     }
   }
 
@@ -593,30 +607,39 @@ function ScannerTab({ onUpdate }: { onUpdate: () => void }) {
           <p className="font-semibold text-ink">Escanear código de barras</p>
         </div>
 
-        {/* Camera feed */}
-        {cameraActive && (
-          <div className="relative mb-4 rounded-card overflow-hidden bg-ink" style={{ aspectRatio: '16/7' }}>
-            <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
-            {/* Scan overlay */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="relative w-56 h-20 border-2 border-calipso rounded-lg">
-                <div
-                  className="absolute inset-x-0 h-0.5 bg-calipso/80 rounded"
-                  style={{ animation: 'scanLine 1.8s ease-in-out infinite' }}
-                />
+        {/* Camera feed — el <video> siempre está en el DOM para que videoRef.current
+             nunca sea null cuando se inicia la cámara (crítico en iOS Safari) */}
+        <div
+          className={clsx(
+            'relative mb-4 rounded-card overflow-hidden bg-ink',
+            !cameraActive && 'hidden'
+          )}
+          style={{ aspectRatio: '16/7' }}
+        >
+          <video ref={videoRef} className="w-full h-full object-cover" muted playsInline autoPlay />
+          {cameraActive && (
+            <>
+              {/* Scan overlay */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="relative w-56 h-20 border-2 border-calipso rounded-lg">
+                  <div
+                    className="absolute inset-x-0 h-0.5 bg-calipso/80 rounded"
+                    style={{ animation: 'scanLine 1.8s ease-in-out infinite' }}
+                  />
+                </div>
               </div>
-            </div>
-            <button
-              onClick={stopCamera}
-              className="absolute top-2 right-2 bg-ink/70 text-white p-1.5 rounded-full hover:bg-ink transition-colors"
-            >
-              <X size={14} />
-            </button>
-            <p className="absolute bottom-2 inset-x-0 text-center text-xs text-white/80">
-              Apunta al código de barras del producto
-            </p>
-          </div>
-        )}
+              <button
+                onClick={stopCamera}
+                className="absolute top-2 right-2 bg-ink/70 text-white p-1.5 rounded-full hover:bg-ink transition-colors"
+              >
+                <X size={14} />
+              </button>
+              <p className="absolute bottom-2 inset-x-0 text-center text-xs text-white/80">
+                Apunta al código de barras del producto
+              </p>
+            </>
+          )}
+        </div>
 
         {cameraError && (
           <div className="mb-3 flex items-center gap-2 text-sm text-coral bg-coral-light px-3 py-2.5 rounded-card">
