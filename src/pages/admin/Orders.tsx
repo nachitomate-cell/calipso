@@ -66,14 +66,12 @@ const PAYMENT_METHODS = [
 
 // ── Kitchen ticket ────────────────────────────────────────────────────────────
 
-// Código de ubicación para el número de mesa (ej: 1 + Interior → "1C")
 const LOC_CODE: Record<Table['location'], string> = {
   comedor:  'C',
   terraza:  'T',
   comedor2: 'C2',
 }
 
-// Mapeo slug de categoría → sección de comanda
 const SLUG_TO_SECTION: Record<string, string> = {
   entradas: 'Entrada',
   ceviches: 'Entrada',
@@ -93,7 +91,6 @@ function buildTicketHTML(order: Order, table: Table, pendingItems: OrderItem[], 
   const mesaCode = `${table.number}${LOC_CODE[table.location] ?? ''}`
   const waiter   = waiterName ?? order.waiter_name ?? ''
 
-  // Agrupar ítems por sección
   const grouped: Record<string, OrderItem[]> = {}
   SECTION_ORDER.forEach(s => { grouped[s] = [] })
   pendingItems.forEach(item => {
@@ -102,7 +99,6 @@ function buildTicketHTML(order: Order, table: Table, pendingItems: OrderItem[], 
     grouped[section].push(item)
   })
 
-  // HTML de cada sección (siempre se muestra aunque esté vacía)
   const sectionsHTML = SECTION_ORDER.map(section => {
     const items = grouped[section]
     const itemsHTML = items.map(item => `
@@ -135,36 +131,21 @@ function buildTicketHTML(order: Order, table: Table, pendingItems: OrderItem[], 
     font-size: 13px;
     line-height: 1.4;
   }
-
-  /* Separadores */
   .sep-full  { border: none; border-top: 1.5px solid #555; margin: 5px 0; }
   .sep-short { border: none; border-top: 1px solid #888; width: 65%; margin: 4px 0 6px; }
-
-  /* Cabecera mesa */
   .mesa-row   { display: flex; justify-content: space-between; align-items: baseline; padding: 2px 0 4px; }
   .mesa-label { font-size: 14px; font-weight: bold; }
   .mesa-num   { font-size: 14px; font-weight: bold; }
-
-  /* Garzón */
   .garzon-label { font-weight: bold; font-size: 13px; }
   .garzon-name  { font-size: 13px; margin: 1px 0 3px; }
-
-  /* Fecha/hora */
   .datetime { font-size: 12px; padding: 3px 0 4px; }
-
-  /* Secciones */
   .section-label { font-weight: bold; font-size: 13px; margin-top: 2px; }
-
-  /* Ítems */
   .item      { margin: 2px 0 2px 2px; }
   .item-row  { display: flex; align-items: baseline; gap: 5px; }
   .qty       { font-size: 13px; min-width: 14px; flex-shrink: 0; }
   .name      { font-size: 13px; }
   .note      { font-size: 11px; font-style: italic; padding-left: 19px; color: #333; }
-
-  /* Nota de comanda */
   .order-note { font-size: 12px; font-style: italic; padding: 3px 0; }
-
   @media print {
     body  { width: 80mm; }
     @page { margin: 0; size: 80mm auto; }
@@ -172,23 +153,18 @@ function buildTicketHTML(order: Order, table: Table, pendingItems: OrderItem[], 
 </style>
 </head>
 <body>
-
 <div class="mesa-row">
   <span class="mesa-label">Mesa N\xb0 :</span>
   <span class="mesa-num">${mesaCode}</span>
 </div>
 <div class="sep-full"></div>
-
 <div class="garzon-label">Garz\xf3n :</div>
 <div class="garzon-name">${waiter}</div>
 <div class="sep-full"></div>
-
 <div class="datetime">${dt}</div>
 <div class="sep-full"></div>
-
 ${sectionsHTML}
 ${noteHTML}
-
 <script>
   window.onload = function() {
     window.print();
@@ -219,7 +195,7 @@ function TableCard({ table, order, selected, onClick, onQuickSend }: {
     <button
       onClick={onClick}
       className={clsx(
-        'relative w-full text-left rounded-card border-2 p-3 transition-all duration-150 text-sm',
+        'relative w-full text-left rounded-card border-2 p-4 transition-all duration-150',
         selected
           ? 'border-calipso bg-calipso-50 shadow-brand-md'
           : 'border-transparent bg-white shadow-brand hover:border-calipso/40',
@@ -228,10 +204,10 @@ function TableCard({ table, order, selected, onClick, onQuickSend }: {
       style={{ borderTop: `3px solid ${borderColor}` }}
     >
       {/* Number + dot */}
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xl font-bold text-ink tabular-nums">#{table.number}</span>
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-2xl font-bold text-ink tabular-nums">#{table.number}</span>
         <span className={clsx(
-          'w-2.5 h-2.5 rounded-full flex-shrink-0',
+          'w-3 h-3 rounded-full flex-shrink-0',
           !order ? 'bg-[#3B6D11]/50'
             : urg === 'urgent' ? 'bg-coral animate-pulse'
             : urg === 'warn'   ? 'bg-amber-400'
@@ -241,62 +217,61 @@ function TableCard({ table, order, selected, onClick, onQuickSend }: {
       </div>
 
       {/* Location */}
-      <p className="text-[10px] text-ink-secondary uppercase tracking-wide mb-1.5">
+      <p className="text-xs text-ink-secondary uppercase tracking-wide mb-1.5 font-medium">
         {table.capacity} pers · {LOC_LABEL[table.location]}
       </p>
 
       {/* Status */}
       {order ? (
         <>
-          <p className={clsx('text-xs font-semibold truncate', STATUS_CFG[order.status].text)}>
+          <p className={clsx('text-sm font-bold truncate', STATUS_CFG[order.status].text)}>
             {STATUS_CFG[order.status].label}
           </p>
-          <p className="text-xs text-ink-secondary mt-0.5 tabular-nums">
+          <p className="text-sm text-ink-secondary mt-0.5 tabular-nums font-medium">
             {elapsed(order.created_at)}
           </p>
           {/* Mini item status */}
           {items.length > 0 && (
             <div className="flex gap-1.5 mt-2 flex-wrap">
               {pendingCount > 0 && (
-                <span className="text-[9px] bg-calipso-50 text-calipso font-semibold px-1.5 py-0.5 rounded-full">
-                  {pendingCount} pendiente{pendingCount > 1 ? 's' : ''}
+                <span className="text-xs bg-calipso-50 text-calipso font-bold px-2 py-0.5 rounded-full">
+                  {pendingCount} pend.
                 </span>
               )}
               {inKitchen > 0 && (
-                <span className="text-[9px] bg-amber-50 text-amber-700 font-semibold px-1.5 py-0.5 rounded-full">
+                <span className="text-xs bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded-full">
                   {inKitchen} cocina
                 </span>
               )}
               {readyCount > 0 && (
-                <span className="text-[9px] bg-[#D4EDDA] text-[#3B6D11] font-semibold px-1.5 py-0.5 rounded-full">
+                <span className="text-xs bg-[#D4EDDA] text-[#3B6D11] font-bold px-2 py-0.5 rounded-full">
                   {readyCount} listo{readyCount > 1 ? 's' : ''}
                 </span>
               )}
             </div>
           )}
-          <div className="flex items-center justify-between mt-1.5">
-            <p className="text-sm font-bold text-ink tabular-nums">{fmtCLP(order.total)}</p>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-base font-bold text-ink tabular-nums">{fmtCLP(order.total)}</p>
             {/* Quick-send button */}
             {pendingCount > 0 && onQuickSend && (
               <button
                 onClick={e => { e.stopPropagation(); onQuickSend() }}
-                className="flex items-center gap-1 text-[9px] bg-amber-500 text-white font-bold px-2 py-1 rounded-full hover:bg-amber-600 transition-colors"
+                className="flex items-center gap-1 text-xs bg-amber-500 text-white font-bold px-3 py-1.5 rounded-full hover:bg-amber-600 transition-colors"
                 title="Enviar pendientes a cocina"
               >
-                <Zap size={9} /> Cocina
+                <Zap size={11} /> Cocina
               </button>
             )}
           </div>
         </>
       ) : (
-        <span className="text-xs font-semibold text-[#3B6D11]">Libre</span>
+        <span className="text-sm font-bold text-[#3B6D11]">Libre</span>
       )}
     </button>
   )
 }
 
 // ── POSGrid ───────────────────────────────────────────────────────────────────
-// Selector táctil estilo terminal POS — reemplaza el modal de lista
 
 type CartEntry = { qty: number; notes: string }
 
@@ -345,44 +320,44 @@ function POSGrid({ menuItems, frequentIds, onAdd, onClose }: {
     <div className="fixed inset-0 bg-ink/70 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div
         className="bg-white rounded-t-2xl sm:rounded-card shadow-brand-lg w-full max-w-lg flex flex-col"
-        style={{ height: '90dvh' }}
+        style={{ height: '92dvh' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-calipso-100 flex-shrink-0">
-          <UtensilsCrossed size={17} className="text-calipso flex-shrink-0" />
-          <span className="font-display font-semibold text-ink italic flex-1">Agregar platos</span>
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-calipso-100 flex-shrink-0">
+          <UtensilsCrossed size={20} className="text-calipso flex-shrink-0" />
+          <span className="font-display font-semibold text-ink italic flex-1 text-lg">Agregar platos</span>
           {totalQty > 0 && (
-            <span className="bg-calipso text-white text-xs font-bold px-2.5 py-0.5 rounded-full tabular-nums">
+            <span className="bg-calipso text-white text-sm font-bold px-3 py-1 rounded-full tabular-nums">
               {totalQty} · {fmtCLP(totalPrice)}
             </span>
           )}
-          <button onClick={onClose} className="text-ink-secondary hover:text-ink p-1 ml-1">
-            <X size={20} />
+          <button onClick={onClose} className="text-ink-secondary hover:text-ink p-2 ml-1">
+            <X size={24} />
           </button>
         </div>
 
         {/* Category tabs */}
-        <div className="flex overflow-x-auto scrollbar-hide gap-1.5 px-3 py-2 border-b border-calipso-100 flex-shrink-0">
+        <div className="flex overflow-x-auto scrollbar-hide gap-2 px-4 py-3 border-b border-calipso-100 flex-shrink-0">
           {TABS.map(tab => (
             <button
               key={tab}
               onClick={() => { setActiveTab(tab); setNoteFor(null) }}
               className={clsx(
-                'flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap flex items-center gap-1',
+                'flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-bold transition-colors whitespace-nowrap flex items-center gap-1.5',
                 activeTab === tab
                   ? 'bg-calipso text-white shadow-brand'
                   : 'bg-calipso-50 text-ink-secondary hover:bg-calipso-100'
               )}
             >
-              {tab === '⭐ Frecuentes' && <Star size={10} className="fill-current" />}
+              {tab === '⭐ Frecuentes' && <Star size={12} className="fill-current" />}
               {tab === '⭐ Frecuentes' ? 'Frecuentes' : tab}
             </button>
           ))}
         </div>
 
         {/* Items grid — toque = +1 */}
-        <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 gap-2.5 content-start">
+        <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 gap-3 content-start">
           {tabItems.map(item => {
             const entry = cart.get(item.id)
             const qty   = entry?.qty ?? 0
@@ -395,40 +370,40 @@ function POSGrid({ menuItems, frequentIds, onAdd, onClose }: {
                 <button
                   onClick={() => inc(item.id)}
                   className={clsx(
-                    'relative w-full rounded-card border-2 p-3 text-left transition-all active:scale-95 flex flex-col justify-between gap-1',
+                    'relative w-full rounded-card border-2 p-4 text-left transition-all active:scale-95 flex flex-col justify-between gap-2',
                     sel
                       ? 'border-calipso bg-calipso-50 shadow-brand'
                       : 'border-calipso-100 bg-white hover:border-calipso/40',
                   )}
-                  style={{ minHeight: 84 }}
+                  style={{ minHeight: 110 }}
                 >
                   {/* Qty bubble */}
                   {qty > 0 && (
-                    <span className="absolute -top-2.5 -right-2.5 w-6 h-6 bg-calipso text-white text-xs font-bold rounded-full flex items-center justify-center shadow-brand leading-none">
+                    <span className="absolute -top-3 -right-3 w-8 h-8 bg-calipso text-white text-sm font-bold rounded-full flex items-center justify-center shadow-brand leading-none">
                       {qty}
                     </span>
                   )}
-                  <p className={clsx('text-sm font-bold leading-tight', sel ? 'text-calipso-700' : 'text-ink')}>
+                  <p className={clsx('text-base font-bold leading-tight', sel ? 'text-calipso-700' : 'text-ink')}>
                     {item.name}
                   </p>
-                  <p className={clsx('text-sm font-semibold', sel ? 'text-calipso' : 'text-ink-secondary')}>
+                  <p className={clsx('text-base font-semibold', sel ? 'text-calipso' : 'text-ink-secondary')}>
                     {fmtCLP(item.price)}
                   </p>
                 </button>
 
                 {/* Controls row — visible when selected */}
                 {sel && (
-                  <div className="flex items-center gap-1 mt-1.5 px-0.5">
+                  <div className="flex items-center gap-1.5 mt-2 px-0.5">
                     <button
                       onClick={() => dec(item.id)}
-                      className="w-7 h-7 rounded-full border border-coral/40 text-coral flex items-center justify-center hover:bg-coral-light transition-colors flex-shrink-0"
+                      className="w-11 h-11 rounded-full border-2 border-coral/40 text-coral flex items-center justify-center hover:bg-coral-light transition-colors flex-shrink-0"
                     >
-                      <Minus size={11} />
+                      <Minus size={16} />
                     </button>
                     <button
                       onClick={() => setNoteFor(noteFor === item.id ? null : item.id)}
                       className={clsx(
-                        'flex-1 text-[10px] rounded px-2 py-1 text-left truncate transition-colors',
+                        'flex-1 text-sm rounded-input px-2 py-2 text-left truncate transition-colors',
                         notes
                           ? 'text-amber-700 bg-amber-50 font-medium'
                           : 'text-ink-secondary hover:bg-calipso-50'
@@ -448,7 +423,7 @@ function POSGrid({ menuItems, frequentIds, onAdd, onClose }: {
                     value={notes}
                     onChange={e => setNote(item.id, e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') setNoteFor(null) }}
-                    className="mt-1.5 w-full text-xs border border-amber-300 bg-amber-50 rounded-input px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    className="mt-2 w-full text-base border border-amber-300 bg-amber-50 rounded-input px-3 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400"
                   />
                 )}
               </div>
@@ -456,22 +431,22 @@ function POSGrid({ menuItems, frequentIds, onAdd, onClose }: {
           })}
 
           {tabItems.length === 0 && (
-            <p className="col-span-2 text-center text-ink-secondary text-sm py-12">
+            <p className="col-span-2 text-center text-ink-secondary text-base py-12">
               Sin platos disponibles aquí
             </p>
           )}
         </div>
 
         {/* Footer CTA */}
-        <div className="border-t border-calipso-100 px-4 py-3 flex-shrink-0 bg-calipso-50" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+        <div className="border-t border-calipso-100 px-4 py-4 flex-shrink-0 bg-calipso-50" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
           <button
             onClick={handleConfirm}
             disabled={totalQty === 0 || saving}
-            className="w-full flex items-center justify-center gap-2 bg-calipso disabled:bg-calipso/40 text-white font-bold py-3.5 rounded-input text-sm transition-colors"
+            className="w-full flex items-center justify-center gap-2 bg-calipso disabled:bg-calipso/40 text-white font-bold py-5 rounded-input text-lg transition-colors"
           >
             {saving
-              ? <RefreshCw size={15} className="animate-spin" />
-              : <Send size={15} />
+              ? <RefreshCw size={20} className="animate-spin" />
+              : <Send size={20} />
             }
             {totalQty > 0
               ? `Agregar ${totalQty} ítem${totalQty !== 1 ? 's' : ''} · ${fmtCLP(totalPrice)}`
@@ -509,22 +484,22 @@ function PaymentModal({ order, onConfirm, onClose }: {
       <div className="bg-white rounded-card shadow-brand-lg w-full max-w-sm" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-calipso-100">
-          <Receipt size={18} className="text-[#3B6D11]" />
-          <span className="font-display font-semibold text-ink italic text-lg">Cobrar Mesa {order.table?.number}</span>
-          <button onClick={onClose} className="ml-auto text-ink-secondary hover:text-ink"><X size={20} /></button>
+        <div className="flex items-center gap-3 px-5 py-5 border-b border-calipso-100">
+          <Receipt size={22} className="text-[#3B6D11]" />
+          <span className="font-display font-semibold text-ink italic text-xl flex-1">Cobrar Mesa {order.table?.number}</span>
+          <button onClick={onClose} className="text-ink-secondary hover:text-ink p-1"><X size={24} /></button>
         </div>
 
-        <div className="px-5 py-4 space-y-5">
+        <div className="px-5 py-5 space-y-5">
           {/* Total */}
-          <div className="bg-calipso-50 rounded-card px-4 py-3 flex items-center justify-between">
-            <span className="text-sm font-medium text-ink">Total a cobrar</span>
-            <span className="text-2xl font-bold text-ink tabular-nums">{fmtCLP(order.total)}</span>
+          <div className="bg-calipso-50 rounded-card px-4 py-4 flex items-center justify-between">
+            <span className="text-base font-semibold text-ink">Total a cobrar</span>
+            <span className="text-3xl font-bold text-ink tabular-nums">{fmtCLP(order.total)}</span>
           </div>
 
           {/* Items summary */}
-          <div className="space-y-1 max-h-32 overflow-y-auto">
-            {(order.items ?? []).filter(i => i.status !== 'delivered' || true).map(item => (
+          <div className="space-y-1.5 max-h-32 overflow-y-auto">
+            {(order.items ?? []).map(item => (
               <div key={item.id} className="flex justify-between text-sm text-ink-secondary">
                 <span className="truncate mr-2">{item.menu_item?.name} ×{item.quantity}</span>
                 <span className="tabular-nums flex-shrink-0">{fmtCLP(item.unit_price * item.quantity)}</span>
@@ -534,20 +509,20 @@ function PaymentModal({ order, onConfirm, onClose }: {
 
           {/* Payment method */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-ink-secondary mb-2">Método de pago</p>
-            <div className="grid grid-cols-2 gap-2">
+            <p className="text-sm font-bold uppercase tracking-wider text-ink-secondary mb-3">Método de pago</p>
+            <div className="grid grid-cols-2 gap-2.5">
               {PAYMENT_METHODS.map(({ id, label, Icon }) => (
                 <button
                   key={id}
                   onClick={() => setMethod(id)}
                   className={clsx(
-                    'flex items-center gap-2 px-3 py-2.5 rounded-input border-2 text-sm font-semibold transition-all',
+                    'flex items-center gap-2.5 px-4 py-4 rounded-input border-2 text-base font-bold transition-all',
                     method === id
                       ? 'border-[#3B6D11] bg-[#D4EDDA] text-[#3B6D11]'
                       : 'border-calipso-100 text-ink hover:border-calipso/40'
                   )}
                 >
-                  <Icon size={15} className="flex-shrink-0" />
+                  <Icon size={20} className="flex-shrink-0" />
                   {label}
                 </button>
               ))}
@@ -556,22 +531,22 @@ function PaymentModal({ order, onConfirm, onClose }: {
 
           {/* Cash change calculator */}
           {method === 'efectivo' && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-ink-secondary">Monto recibido</p>
+            <div className="space-y-2.5">
+              <p className="text-sm font-bold uppercase tracking-wider text-ink-secondary">Monto recibido</p>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-secondary text-sm">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-secondary text-base font-semibold">$</span>
                 <input
                   type="text"
                   inputMode="numeric"
                   placeholder="0"
                   value={received}
                   onChange={e => setReceived(e.target.value)}
-                  className="w-full pl-7 pr-4 py-2.5 text-sm border border-calipso-100 rounded-input focus:outline-none focus:ring-2 focus:ring-calipso tabular-nums"
+                  className="w-full pl-9 pr-4 py-4 text-base border border-calipso-100 rounded-input focus:outline-none focus:ring-2 focus:ring-calipso tabular-nums"
                 />
               </div>
               {change !== null && (
                 <div className={clsx(
-                  'flex justify-between items-center px-3 py-2 rounded-input text-sm font-semibold',
+                  'flex justify-between items-center px-4 py-3 rounded-input text-base font-bold',
                   change >= 0 ? 'bg-[#D4EDDA] text-[#3B6D11]' : 'bg-coral-light text-coral-dark'
                 )}>
                   <span>{change >= 0 ? 'Vuelto' : 'Falta'}</span>
@@ -583,13 +558,13 @@ function PaymentModal({ order, onConfirm, onClose }: {
         </div>
 
         {/* Footer */}
-        <div className="px-5 pb-5">
+        <div className="px-5 pb-6">
           <button
             onClick={handleConfirm}
             disabled={!method || loading || (method === 'efectivo' && change !== null && change < 0)}
-            className="w-full flex items-center justify-center gap-2 bg-[#3B6D11] disabled:opacity-50 text-white font-semibold py-3 rounded-input text-sm transition-colors hover:bg-[#2D5509]"
+            className="w-full flex items-center justify-center gap-2.5 bg-[#3B6D11] disabled:opacity-50 text-white font-bold py-5 rounded-input text-lg transition-colors hover:bg-[#2D5509]"
           >
-            {loading ? <RefreshCw size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+            {loading ? <RefreshCw size={20} className="animate-spin" /> : <CheckCircle2 size={20} />}
             Confirmar pago
           </button>
         </div>
@@ -603,13 +578,13 @@ function PaymentModal({ order, onConfirm, onClose }: {
 function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }: {
   table: Table; order?: Order; menuItems: MenuItem[]; waiters: Waiter[]; frequentIds: string[]; onRefresh: () => void
 }) {
-  const [showAdd,       setShowAdd]       = useState(false)
-  const [showPayment,   setShowPayment]   = useState(false)
-  const [showCancel,    setShowCancel]    = useState(false)
-  const [editNotes,     setEditNotes]     = useState(false)
-  const [notesValue,    setNotesValue]    = useState(order?.notes ?? '')
-  const [loading,       setLoading]       = useState<string | null>(null)
-  const [error,         setError]         = useState<string | null>(null)
+  const [showAdd,        setShowAdd]        = useState(false)
+  const [showPayment,    setShowPayment]    = useState(false)
+  const [showCancel,     setShowCancel]     = useState(false)
+  const [editNotes,      setEditNotes]      = useState(false)
+  const [notesValue,     setNotesValue]     = useState(order?.notes ?? '')
+  const [loading,        setLoading]        = useState<string | null>(null)
+  const [error,          setError]          = useState<string | null>(null)
   const [selectedWaiter, setSelectedWaiter] = useState('')
   const notesRef = useRef<HTMLInputElement>(null)
 
@@ -628,47 +603,47 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
   // No order → free table: select waiter then open
   if (!order) {
     return (
-      <div className="flex flex-col h-full p-6 gap-5 overflow-y-auto">
+      <div className="flex flex-col h-full p-6 gap-6 overflow-y-auto">
         {/* Mesa info */}
-        <div className="flex items-center gap-3">
-          <div className="w-14 h-14 rounded-full bg-calipso-50 flex items-center justify-center flex-shrink-0">
-            <UtensilsCrossed size={26} className="text-calipso" />
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-calipso-50 flex items-center justify-center flex-shrink-0">
+            <UtensilsCrossed size={30} className="text-calipso" />
           </div>
           <div>
-            <p className="font-display italic text-xl text-ink font-bold">Mesa {table.number} — Libre</p>
-            <p className="text-sm text-ink-secondary">{table.capacity} personas · {LOC_LABEL[table.location]}</p>
+            <p className="font-display italic text-2xl text-ink font-bold">Mesa {table.number} — Libre</p>
+            <p className="text-base text-ink-secondary">{table.capacity} personas · {LOC_LABEL[table.location]}</p>
           </div>
         </div>
 
         {/* Waiter selector */}
         <div>
-          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-ink-secondary mb-3">
-            <User2 size={12} /> ¿Quién atiende esta mesa?
+          <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-ink-secondary mb-4">
+            <User2 size={14} /> ¿Quién atiende esta mesa?
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {waiters.map(w => (
               <button
                 key={w.id}
                 onClick={() => setSelectedWaiter(w.name)}
                 className={clsx(
-                  'px-3 py-2.5 rounded-card text-sm font-semibold border-2 transition-all text-left',
+                  'px-4 py-4 rounded-card text-base font-bold border-2 transition-all text-left flex items-center gap-3',
                   selectedWaiter === w.name
                     ? 'border-calipso bg-calipso text-white shadow-brand-md'
                     : 'border-calipso-100 text-ink hover:border-calipso/40 bg-white'
                 )}
               >
                 <span className={clsx(
-                  'inline-flex w-7 h-7 rounded-full items-center justify-center text-[10px] font-bold mr-2 flex-shrink-0',
-                  selectedWaiter === w.name ? 'bg-white/20' : 'bg-calipso-50 text-calipso'
+                  'inline-flex w-9 h-9 rounded-full items-center justify-center text-xs font-bold flex-shrink-0',
+                  selectedWaiter === w.name ? 'bg-white/20 text-white' : 'bg-calipso-50 text-calipso'
                 )}>
                   {w.name.split(' ').map(p => p[0]).slice(0, 2).join('')}
                 </span>
-                {w.name}
+                <span className="truncate">{w.name}</span>
               </button>
             ))}
           </div>
           {waiters.length === 0 && (
-            <p className="text-xs text-ink-secondary italic">
+            <p className="text-sm text-ink-secondary italic">
               No hay garzones activos. Configúralos en{' '}
               <a href="/admin/garzones" className="text-calipso underline">Garzones</a>.
             </p>
@@ -679,9 +654,9 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
         <button
           onClick={() => wrap('create', async () => { await createOrder(table.id, selectedWaiter || undefined) })}
           disabled={loading === 'create' || (waiters.length > 0 && !selectedWaiter)}
-          className="flex items-center justify-center gap-2 bg-calipso text-white px-6 py-3 rounded-input text-sm font-semibold hover:bg-calipso-700 transition-colors disabled:opacity-50"
+          className="flex items-center justify-center gap-3 bg-calipso text-white px-6 py-5 rounded-input text-lg font-bold hover:bg-calipso-700 transition-colors disabled:opacity-50"
         >
-          {loading === 'create' ? <RefreshCw size={15} className="animate-spin" /> : <Plus size={15} />}
+          {loading === 'create' ? <RefreshCw size={20} className="animate-spin" /> : <Plus size={20} />}
           {selectedWaiter ? `Abrir comanda — ${selectedWaiter.split(' ')[0]}` : 'Abrir comanda'}
         </button>
       </div>
@@ -720,7 +695,7 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
   const handlePayment = async (method: string) => {
     await wrap('pay', async () => {
       await closeOrder(order.id)
-      void method // could be stored in order notes or a separate field
+      void method
     })
     setShowPayment(false)
   }
@@ -734,48 +709,48 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
       <div className="px-5 py-4 border-b border-calipso-100 bg-white">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-display font-bold text-ink text-xl italic">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 className="font-display font-bold text-ink text-2xl italic">
                 Mesa {table.number}
-                <span className="text-ink-secondary font-normal text-sm ml-2 not-italic">
+                <span className="text-ink-secondary font-normal text-base ml-2 not-italic">
                   {LOC_LABEL[table.location]}
                 </span>
               </h2>
               <span className={clsx(
-                'text-xs font-semibold px-2.5 py-0.5 rounded-full',
+                'text-sm font-bold px-3 py-1 rounded-full',
                 STATUS_CFG[order.status].badge
               )}>
                 {STATUS_CFG[order.status].label}
               </span>
             </div>
-            <div className="flex items-center gap-2 flex-wrap mt-0.5">
-              <p className="text-sm text-ink-secondary">
-                Abierta hace <span className="font-semibold">{elapsed(order.created_at)}</span>
+            <div className="flex items-center gap-2 flex-wrap mt-1">
+              <p className="text-base text-ink-secondary">
+                Abierta hace <span className="font-bold">{elapsed(order.created_at)}</span>
                 {elapsedMin(order.created_at) > 40 && (
-                  <span className="text-coral font-semibold ml-1">⚠ Tiempo excedido</span>
+                  <span className="text-coral font-bold ml-2">⚠ Tiempo excedido</span>
                 )}
               </p>
               {order.waiter_name && (
-                <span className="inline-flex items-center gap-1 text-xs bg-calipso-50 text-calipso font-semibold px-2 py-0.5 rounded-full">
-                  <User2 size={10} /> {order.waiter_name}
+                <span className="inline-flex items-center gap-1.5 text-sm bg-calipso-50 text-calipso font-bold px-2.5 py-1 rounded-full">
+                  <User2 size={12} /> {order.waiter_name}
                 </span>
               )}
             </div>
           </div>
           <Link to="/admin/cocina" target="_blank"
-            className="flex items-center gap-1 text-xs text-calipso hover:underline flex-shrink-0 mt-1">
-            Cocina <ExternalLink size={11} />
+            className="flex items-center gap-1 text-sm text-calipso hover:underline flex-shrink-0 mt-1">
+            Cocina <ExternalLink size={13} />
           </Link>
         </div>
 
         {/* Progress bar */}
         {activeItems.length > 0 && (
           <div className="mt-3">
-            <div className="flex justify-between text-xs text-ink-secondary mb-1">
+            <div className="flex justify-between text-sm text-ink-secondary mb-1.5">
               <span>Progreso cocina</span>
-              <span className="tabular-nums font-semibold">{readyCount}/{activeItems.length} listos</span>
+              <span className="tabular-nums font-bold">{readyCount}/{activeItems.length} listos</span>
             </div>
-            <div className="h-2 bg-calipso-50 rounded-full overflow-hidden">
+            <div className="h-2.5 bg-calipso-50 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full bg-[#3B6D11] transition-all duration-500"
                 style={{ width: `${progressPct}%` }}
@@ -796,24 +771,24 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
                 onChange={e => setNotesValue(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleSaveNotes(); if (e.key === 'Escape') setEditNotes(false) }}
                 placeholder="Nota de la comanda (alergias, preferencias…)"
-                className="flex-1 text-sm border border-calipso-100 rounded-input px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-calipso"
+                className="flex-1 text-base border border-calipso-100 rounded-input px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-calipso"
               />
               <button onClick={handleSaveNotes} disabled={loading === 'notes'}
-                className="text-xs bg-calipso text-white px-3 py-1.5 rounded-input font-semibold hover:bg-calipso-700">
-                {loading === 'notes' ? <RefreshCw size={12} className="animate-spin" /> : 'Guardar'}
+                className="text-sm bg-calipso text-white px-4 py-2.5 rounded-input font-bold hover:bg-calipso-700">
+                {loading === 'notes' ? <RefreshCw size={14} className="animate-spin" /> : 'Guardar'}
               </button>
-              <button onClick={() => setEditNotes(false)} className="text-ink-secondary hover:text-ink p-1.5">
-                <X size={14} />
+              <button onClick={() => setEditNotes(false)} className="text-ink-secondary hover:text-ink p-2">
+                <X size={16} />
               </button>
             </div>
           ) : (
             <button
               onClick={() => setEditNotes(true)}
-              className="flex items-center gap-1.5 text-xs text-ink-secondary hover:text-calipso transition-colors group"
+              className="flex items-center gap-2 text-sm text-ink-secondary hover:text-calipso transition-colors group"
             >
-              <Pencil size={11} />
+              <Pencil size={13} />
               {order.notes
-                ? <span className="italic text-ink">{order.notes}</span>
+                ? <span className="italic text-ink text-sm">{order.notes}</span>
                 : <span className="group-hover:underline">Agregar nota a la comanda</span>
               }
             </button>
@@ -823,8 +798,8 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
 
       {/* Error banner */}
       {error && (
-        <div className="mx-4 mt-3 flex items-center gap-2 bg-coral-light text-coral text-sm px-3 py-2 rounded-input">
-          <AlertCircle size={14} /> {error}
+        <div className="mx-4 mt-3 flex items-center gap-2 bg-coral-light text-coral text-base px-4 py-3 rounded-input">
+          <AlertCircle size={16} /> {error}
         </div>
       )}
 
@@ -832,8 +807,8 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 bg-calipso-50/30">
         {items.length === 0 && (
           <div className="text-center py-12">
-            <UtensilsCrossed size={32} className="text-calipso/30 mx-auto mb-3" />
-            <p className="text-sm text-ink-secondary">Comanda vacía — agrega platos</p>
+            <UtensilsCrossed size={36} className="text-calipso/30 mx-auto mb-3" />
+            <p className="text-base text-ink-secondary">Comanda vacía — agrega platos</p>
           </div>
         )}
 
@@ -844,19 +819,19 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
           const Icon = cfg.Icon
           return (
             <div key={status}>
-              <div className="flex items-center gap-2 mb-2">
-                <Icon size={13} className={cfg.cls} />
-                <span className={clsx('text-xs font-bold uppercase tracking-wider', cfg.cls)}>
+              <div className="flex items-center gap-2 mb-2.5">
+                <Icon size={15} className={cfg.cls} />
+                <span className={clsx('text-sm font-bold uppercase tracking-wider', cfg.cls)}>
                   {cfg.label} ({groupItems.length})
                 </span>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {groupItems.map(item => (
                   <div
                     key={item.id}
                     className={clsx(
-                      'flex items-start gap-3 px-3 py-2.5 rounded-input transition-colors',
+                      'flex items-center gap-3 px-3 py-4 rounded-input transition-colors',
                       status === 'delivered'
                         ? 'opacity-40'
                         : status === 'ready'
@@ -865,47 +840,47 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
                     )}
                   >
                     {/* Qty stepper (only for pending) */}
-                    <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       {status === 'pending' ? (
                         <>
                           <button
                             onClick={() => handleQtyChange(item, -1)}
                             disabled={!!loading}
-                            className="w-5 h-5 rounded-full border border-calipso/30 text-calipso flex items-center justify-center hover:bg-calipso hover:text-white transition-colors disabled:opacity-40"
+                            className="w-10 h-10 rounded-full border-2 border-calipso/30 text-calipso flex items-center justify-center hover:bg-calipso hover:text-white transition-colors disabled:opacity-40"
                           >
                             {(loading === `remove-${item.id}` || loading === `qty-${item.id}`)
-                              ? <RefreshCw size={9} className="animate-spin" />
-                              : <Minus size={10} />}
+                              ? <RefreshCw size={13} className="animate-spin" />
+                              : <Minus size={16} />}
                           </button>
-                          <span className="text-sm font-bold text-ink w-4 text-center tabular-nums">{item.quantity}</span>
+                          <span className="text-xl font-bold text-ink w-8 text-center tabular-nums">{item.quantity}</span>
                           <button
                             onClick={() => handleQtyChange(item, 1)}
                             disabled={!!loading}
-                            className="w-5 h-5 rounded-full bg-calipso text-white flex items-center justify-center hover:bg-calipso-700 transition-colors disabled:opacity-40"
+                            className="w-10 h-10 rounded-full bg-calipso text-white flex items-center justify-center hover:bg-calipso-700 transition-colors disabled:opacity-40"
                           >
-                            <Plus size={10} />
+                            <Plus size={16} />
                           </button>
                         </>
                       ) : (
-                        <span className="text-sm font-bold text-ink-secondary w-10 tabular-nums">×{item.quantity}</span>
+                        <span className="text-lg font-bold text-ink-secondary w-12 tabular-nums">×{item.quantity}</span>
                       )}
                     </div>
 
                     {/* Name + notes */}
                     <div className="flex-1 min-w-0">
                       <p className={clsx(
-                        'text-sm font-semibold text-ink leading-snug',
+                        'text-base font-bold text-ink leading-snug',
                         status === 'delivered' && 'line-through text-ink-secondary'
                       )}>
                         {item.menu_item?.name ?? item.menu_item_id}
                       </p>
                       {item.notes && (
-                        <p className="text-xs text-amber-600 italic mt-0.5">📝 {item.notes}</p>
+                        <p className="text-sm text-amber-600 italic mt-0.5">📝 {item.notes}</p>
                       )}
                     </div>
 
                     {/* Price */}
-                    <span className="text-sm font-semibold text-ink tabular-nums flex-shrink-0">
+                    <span className="text-base font-bold text-ink tabular-nums flex-shrink-0">
                       {fmtCLP(item.unit_price * item.quantity)}
                     </span>
 
@@ -914,10 +889,10 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
                       <button
                         onClick={() => wrap(`deliver-${item.id}`, () => updateOrderItemStatus(item.id, 'delivered'))}
                         disabled={loading === `deliver-${item.id}`}
-                        className="text-xs font-semibold text-[#3B6D11] hover:bg-[#3B6D11] hover:text-white px-2 py-0.5 rounded transition-colors flex-shrink-0 border border-[#3B6D11]/30"
+                        className="text-sm font-bold text-[#3B6D11] hover:bg-[#3B6D11] hover:text-white px-3 py-2.5 rounded-input transition-colors flex-shrink-0 border-2 border-[#3B6D11]/40 min-h-[44px] flex items-center"
                         title="Marcar entregado"
                       >
-                        {loading === `deliver-${item.id}` ? <RefreshCw size={11} className="animate-spin" /> : 'Entregar'}
+                        {loading === `deliver-${item.id}` ? <RefreshCw size={13} className="animate-spin" /> : 'Entregar'}
                       </button>
                     )}
                   </div>
@@ -929,86 +904,80 @@ function OrderPanel({ table, order, menuItems, waiters, frequentIds, onRefresh }
       </div>
 
       {/* Footer — actions */}
-      <div className="border-t border-calipso-100 bg-white px-4 py-3 space-y-3">
+      <div className="border-t border-calipso-100 bg-white px-4 py-4 space-y-3">
         {/* Total */}
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-sm text-ink-secondary">Total comanda</span>
-            {hasPending && <span className="text-xs text-ink-secondary/60 ml-2">(incl. pendientes)</span>}
+            <span className="text-base text-ink-secondary font-medium">Total comanda</span>
+            {hasPending && <span className="text-sm text-ink-secondary/60 ml-2">(incl. pendientes)</span>}
           </div>
-          <span className="text-2xl font-bold text-ink tabular-nums">{fmtCLP(order.total)}</span>
+          <span className="text-3xl font-bold text-ink tabular-nums">{fmtCLP(order.total)}</span>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex flex-wrap gap-2">
-          {/* Always: Add */}
+        {/* ── Botón: Agregar platos (siempre visible) */}
+        <button
+          onClick={() => setShowAdd(true)}
+          className="w-full flex items-center justify-center gap-2 border-2 border-calipso text-calipso text-base font-bold px-4 py-3.5 rounded-input hover:bg-calipso hover:text-white transition-colors"
+        >
+          <Plus size={18} /> Agregar platos
+        </button>
+
+        {/* ── Botón: Enviar a cocina (grande, destacado) */}
+        {hasPending && order.status !== 'ready' && (
           <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-1.5 border border-calipso text-calipso text-xs font-semibold px-3 py-2 rounded-input hover:bg-calipso hover:text-white transition-colors"
+            onClick={() => {
+              const pendingItems = items.filter(i => i.status === 'pending')
+              const printWin = window.open('', '_blank', 'width=420,height=620,toolbar=no,menubar=no,location=no,status=no')
+              wrap('kitchen', async () => {
+                await sendOrderToKitchen(order.id)
+                if (printWin) {
+                  printWin.document.write(buildTicketHTML(order, table, pendingItems, order.waiter_name ?? undefined))
+                  printWin.document.close()
+                }
+              })
+            }}
+            disabled={loading === 'kitchen'}
+            className="w-full flex items-center justify-center gap-3 bg-amber-500 text-white text-lg font-bold px-4 py-4 rounded-input hover:bg-amber-600 transition-colors disabled:opacity-50"
           >
-            <Plus size={13} /> Agregar
+            {loading === 'kitchen' ? <RefreshCw size={20} className="animate-spin" /> : <Send size={20} />}
+            Enviar a cocina
           </button>
+        )}
 
-          {/* Send to kitchen + print ticket */}
-          {hasPending && order.status !== 'ready' && (
-            <button
-              onClick={() => {
-                // Capturamos los ítems pendientes ANTES del envío
-                const pendingItems = items.filter(i => i.status === 'pending')
-                // Abrimos la ventana de forma síncrona (dentro del click handler)
-                // para evitar que el bloqueador de popups la rechace
-                const printWin = window.open('', '_blank', 'width=420,height=620,toolbar=no,menubar=no,location=no,status=no')
-                wrap('kitchen', async () => {
-                  await sendOrderToKitchen(order.id)
-                  if (printWin) {
-                    printWin.document.write(buildTicketHTML(order, table, pendingItems, order.waiter_name ?? undefined))
-                    printWin.document.close()
-                  }
-                })
-              }}
-              disabled={loading === 'kitchen'}
-              className="flex items-center gap-1.5 bg-amber-500 text-white text-xs font-semibold px-3 py-2 rounded-input hover:bg-amber-600 transition-colors disabled:opacity-50 flex-1 justify-center"
-            >
-              {loading === 'kitchen' ? <RefreshCw size={13} className="animate-spin" /> : <Send size={13} />}
-              Enviar a cocina
-            </button>
-          )}
+        {/* ── Botón: Cobrar (grande, destacado) */}
+        {(allDelivered || readyCount > 0) && !hasPending && (
+          <button
+            onClick={() => setShowPayment(true)}
+            className="w-full flex items-center justify-center gap-3 bg-[#3B6D11] text-white text-lg font-bold px-4 py-4 rounded-input hover:bg-[#2D5509] transition-colors"
+          >
+            <CreditCard size={20} /> Cobrar mesa
+          </button>
+        )}
 
-          {/* Pay */}
-          {(allDelivered || readyCount > 0) && !hasPending && (
+        {/* ── Cancelar comanda (pequeño, al fondo) */}
+        {!showCancel ? (
+          <button
+            onClick={() => setShowCancel(true)}
+            className="w-full flex items-center justify-center gap-2 text-sm text-coral font-semibold py-2.5 rounded-input hover:bg-coral-light transition-colors"
+          >
+            <Ban size={14} /> Cancelar comanda
+          </button>
+        ) : (
+          <div className="flex items-center gap-2 p-3 bg-coral-light/60 rounded-input">
+            <span className="flex-1 text-sm font-bold text-coral">¿Cancelar esta comanda?</span>
             <button
-              onClick={() => setShowPayment(true)}
-              className="flex items-center gap-1.5 bg-[#3B6D11] text-white text-xs font-semibold px-3 py-2 rounded-input hover:bg-[#2D5509] transition-colors flex-1 justify-center"
+              onClick={handleCancel}
+              disabled={loading === 'cancel'}
+              className="text-sm bg-coral text-white font-bold px-5 py-2.5 rounded-input hover:bg-coral-hover transition-colors"
             >
-              <CreditCard size={13} /> Cobrar
+              {loading === 'cancel' ? <RefreshCw size={13} className="animate-spin" /> : 'Sí, cancelar'}
             </button>
-          )}
-
-          {/* Cancel */}
-          {!showCancel ? (
-            <button
-              onClick={() => setShowCancel(true)}
-              className="flex items-center gap-1.5 text-coral border border-coral/25 text-xs font-semibold px-3 py-2 rounded-input hover:bg-coral-light transition-colors ml-auto"
-            >
-              <Ban size={13} /> Cancelar
+            <button onClick={() => setShowCancel(false)}
+              className="text-sm border-2 border-calipso-100 px-5 py-2.5 rounded-input hover:bg-calipso-50 transition-colors text-ink-secondary font-semibold">
+              No
             </button>
-          ) : (
-            <div className="flex gap-1.5 ml-auto">
-              <span className="text-xs text-ink-secondary self-center">¿Cancelar comanda?</span>
-              <button
-                onClick={handleCancel}
-                disabled={loading === 'cancel'}
-                className="text-xs bg-coral text-white font-semibold px-3 py-1.5 rounded-input hover:bg-coral-hover transition-colors"
-              >
-                {loading === 'cancel' ? <RefreshCw size={11} className="animate-spin" /> : 'Sí'}
-              </button>
-              <button onClick={() => setShowCancel(false)}
-                className="text-xs border border-calipso-100 px-3 py-1.5 rounded-input hover:bg-calipso-50 transition-colors text-ink-secondary">
-                No
-              </button>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {showAdd && (
@@ -1040,8 +1009,8 @@ function OrderHistoryView({ orders }: { orders: Order[] }) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center p-8">
         <History size={40} className="text-calipso/30 mb-4" />
-        <p className="font-display italic text-lg text-ink">Sin comandas cerradas hoy</p>
-        <p className="text-sm text-ink-secondary mt-1">Las comandas cobradas o canceladas aparecerán aquí.</p>
+        <p className="font-display italic text-xl text-ink">Sin comandas cerradas hoy</p>
+        <p className="text-base text-ink-secondary mt-1">Las comandas cobradas o canceladas aparecerán aquí.</p>
       </div>
     )
   }
@@ -1051,13 +1020,13 @@ function OrderHistoryView({ orders }: { orders: Order[] }) {
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Cobradas', value: closed.filter(o => o.status === 'paid').length, color: 'text-[#3B6D11]' },
-          { label: 'Canceladas', value: closed.filter(o => o.status === 'cancelled').length, color: 'text-coral' },
-          { label: 'Total recaudado', value: fmtCLP(totalRevenue), color: 'text-calipso' },
+          { label: 'Cobradas',       value: closed.filter(o => o.status === 'paid').length,      color: 'text-[#3B6D11]' },
+          { label: 'Canceladas',     value: closed.filter(o => o.status === 'cancelled').length,  color: 'text-coral' },
+          { label: 'Total recaudado',value: fmtCLP(totalRevenue),                                 color: 'text-calipso' },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-white rounded-card p-4 shadow-brand text-center">
-            <p className={clsx('text-xl font-bold tabular-nums', color)}>{value}</p>
-            <p className="text-xs text-ink-secondary mt-1">{label}</p>
+            <p className={clsx('text-2xl font-bold tabular-nums', color)}>{value}</p>
+            <p className="text-sm text-ink-secondary mt-1">{label}</p>
           </div>
         ))}
       </div>
@@ -1071,32 +1040,32 @@ function OrderHistoryView({ orders }: { orders: Order[] }) {
             <div key={order.id} className={clsx('border-b border-calipso-50 last:border-0', idx === 0 && '')}>
               <button
                 onClick={() => setExpanded(isExpanded ? null : order.id)}
-                className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-calipso-50 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-5 py-4 hover:bg-calipso-50 transition-colors text-left"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-ink">Mesa {order.table?.number ?? '—'}</span>
+                    <span className="font-bold text-ink text-base">Mesa {order.table?.number ?? '—'}</span>
                     <span className={clsx(
-                      'text-xs font-semibold px-2 py-0.5 rounded-full',
+                      'text-sm font-bold px-2.5 py-0.5 rounded-full',
                       STATUS_CFG[order.status].badge
                     )}>
                       {STATUS_CFG[order.status].label}
                     </span>
                   </div>
-                  <p className="text-xs text-ink-secondary mt-0.5">
+                  <p className="text-sm text-ink-secondary mt-0.5">
                     {items.length} ítem{items.length !== 1 ? 's' : ''} ·{' '}
                     {new Date(order.updated_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
                     {order.notes && <span className="ml-2 italic">· {order.notes}</span>}
                   </p>
                 </div>
-                <span className="font-bold text-ink tabular-nums text-sm flex-shrink-0">
+                <span className="font-bold text-ink tabular-nums text-base flex-shrink-0">
                   {fmtCLP(order.total)}
                 </span>
-                {isExpanded ? <ChevronUp size={14} className="text-ink-secondary flex-shrink-0" /> : <ChevronDown size={14} className="text-ink-secondary flex-shrink-0" />}
+                {isExpanded ? <ChevronUp size={16} className="text-ink-secondary flex-shrink-0" /> : <ChevronDown size={16} className="text-ink-secondary flex-shrink-0" />}
               </button>
 
               {isExpanded && (
-                <div className="px-5 pb-3 space-y-1 bg-calipso-50/40">
+                <div className="px-5 pb-4 space-y-1.5 bg-calipso-50/40">
                   {items.map(item => (
                     <div key={item.id} className="flex justify-between text-sm text-ink-secondary">
                       <span>{item.menu_item?.name ?? '—'} ×{item.quantity}{item.notes && <span className="italic ml-1 text-amber-600">({item.notes})</span>}</span>
@@ -1113,7 +1082,7 @@ function OrderHistoryView({ orders }: { orders: Order[] }) {
   )
 }
 
-// ── DishRegistry ─────────────────────────────────────────────────────────────
+// ── DishRegistry ──────────────────────────────────────────────────────────────
 
 type DishStat = {
   id: string
@@ -1165,14 +1134,13 @@ function DishRegistry({ orders }: { orders: Order[] }) {
 
       {/* Controls */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        {/* Period */}
         <div className="flex rounded-input border border-calipso-100 overflow-hidden">
           {(['hoy', 'todo'] as const).map(p => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
               className={clsx(
-                'px-4 py-2 text-xs font-semibold transition-colors',
+                'px-5 py-2.5 text-sm font-bold transition-colors',
                 period === p ? 'bg-calipso text-white' : 'text-ink-secondary hover:bg-calipso-50'
               )}
             >
@@ -1181,14 +1149,13 @@ function DishRegistry({ orders }: { orders: Order[] }) {
           ))}
         </div>
 
-        {/* Sort */}
         <div className="flex rounded-input border border-calipso-100 overflow-hidden">
           {(['qty', 'revenue'] as const).map(s => (
             <button
               key={s}
               onClick={() => setSortBy(s)}
               className={clsx(
-                'px-4 py-2 text-xs font-semibold transition-colors',
+                'px-5 py-2.5 text-sm font-bold transition-colors',
                 sortBy === s ? 'bg-calipso text-white' : 'text-ink-secondary hover:bg-calipso-50'
               )}
             >
@@ -1201,13 +1168,13 @@ function DishRegistry({ orders }: { orders: Order[] }) {
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Platos vendidos',  value: totalQty,            cls: 'text-ink' },
-          { label: 'Líneas de pedido', value: totalOrders,         cls: 'text-calipso' },
-          { label: 'Ingreso total',    value: fmtCLP(totalRev),    cls: 'text-[#3B6D11]' },
+          { label: 'Platos vendidos',  value: totalQty,         cls: 'text-ink' },
+          { label: 'Líneas de pedido', value: totalOrders,      cls: 'text-calipso' },
+          { label: 'Ingreso total',    value: fmtCLP(totalRev), cls: 'text-[#3B6D11]' },
         ].map(({ label, value, cls }) => (
           <div key={label} className="bg-white rounded-card p-4 shadow-brand text-center">
-            <p className={clsx('text-xl font-bold tabular-nums', cls)}>{value}</p>
-            <p className="text-xs text-ink-secondary mt-1">{label}</p>
+            <p className={clsx('text-2xl font-bold tabular-nums', cls)}>{value}</p>
+            <p className="text-sm text-ink-secondary mt-1">{label}</p>
           </div>
         ))}
       </div>
@@ -1216,20 +1183,20 @@ function DishRegistry({ orders }: { orders: Order[] }) {
       {stats.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <BarChart2 size={40} className="text-calipso/30 mb-4" />
-          <p className="font-display italic text-lg text-ink">Sin datos para el período</p>
-          <p className="text-sm text-ink-secondary mt-1">
+          <p className="font-display italic text-xl text-ink">Sin datos para el período</p>
+          <p className="text-base text-ink-secondary mt-1">
             Los platos pedidos aparecerán aquí una vez que haya comandas.
           </p>
         </div>
       ) : (
         <div className="bg-white rounded-card shadow-brand overflow-hidden">
           {/* Header */}
-          <div className="grid grid-cols-[2.5rem_1fr_5.5rem_5.5rem_7rem] gap-2 px-5 py-2.5 bg-calipso-50 border-b border-calipso-100">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-secondary">#</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-secondary">Plato</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-secondary text-right">Unidades</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-secondary text-right">Pedidos</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-secondary text-right">Ingresos</span>
+          <div className="grid grid-cols-[2.5rem_1fr_5.5rem_5.5rem_7rem] gap-2 px-5 py-3 bg-calipso-50 border-b border-calipso-100">
+            <span className="text-xs font-bold uppercase tracking-wider text-ink-secondary">#</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-ink-secondary">Plato</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-ink-secondary text-right">Unidades</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-ink-secondary text-right">Pedidos</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-ink-secondary text-right">Ingresos</span>
           </div>
 
           {stats.map((dish, idx) => {
@@ -1248,16 +1215,13 @@ function DishRegistry({ orders }: { orders: Order[] }) {
                 'border-b border-calipso-50 last:border-0',
                 isTop && 'bg-calipso-50/30'
               )}>
-                <div className="grid grid-cols-[2.5rem_1fr_5.5rem_5.5rem_7rem] gap-2 items-center px-5 py-3">
-                  {/* Rank */}
+                <div className="grid grid-cols-[2.5rem_1fr_5.5rem_5.5rem_7rem] gap-2 items-center px-5 py-3.5">
                   <span className={clsx('text-sm font-bold tabular-nums', rankColor)}>
                     {idx + 1}
                   </span>
-
-                  {/* Name + category + bar */}
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-semibold text-ink truncate">{dish.name}</p>
+                      <p className="text-sm font-bold text-ink truncate">{dish.name}</p>
                       {idx === 0 && (
                         <TrendingUp size={12} className="text-amber-500 flex-shrink-0" />
                       )}
@@ -1273,23 +1237,17 @@ function DishRegistry({ orders }: { orders: Order[] }) {
                       />
                     </div>
                   </div>
-
-                  {/* Qty */}
                   <span className={clsx(
                     'text-sm font-bold tabular-nums text-right',
                     sortBy === 'qty' ? 'text-ink' : 'text-ink-secondary'
                   )}>
                     {dish.qty}
                   </span>
-
-                  {/* Orders */}
                   <span className="text-sm text-ink-secondary tabular-nums text-right">
                     {dish.orders}
                   </span>
-
-                  {/* Revenue */}
                   <span className={clsx(
-                    'text-sm font-semibold tabular-nums text-right',
+                    'text-sm font-bold tabular-nums text-right',
                     sortBy === 'revenue' ? 'text-[#3B6D11]' : 'text-ink-secondary'
                   )}>
                     {fmtCLP(dish.revenue)}
@@ -1300,9 +1258,9 @@ function DishRegistry({ orders }: { orders: Order[] }) {
           })}
 
           {/* Footer total */}
-          <div className="grid grid-cols-[2.5rem_1fr_5.5rem_5.5rem_7rem] gap-2 items-center px-5 py-3 bg-calipso-50 border-t border-calipso-100">
+          <div className="grid grid-cols-[2.5rem_1fr_5.5rem_5.5rem_7rem] gap-2 items-center px-5 py-3.5 bg-calipso-50 border-t border-calipso-100">
             <span />
-            <span className="text-xs font-bold text-ink uppercase tracking-wide">Total</span>
+            <span className="text-sm font-bold text-ink uppercase tracking-wide">Total</span>
             <span className="text-sm font-bold text-ink tabular-nums text-right">{totalQty}</span>
             <span className="text-sm font-bold text-ink-secondary tabular-nums text-right">{totalOrders}</span>
             <span className="text-sm font-bold text-[#3B6D11] tabular-nums text-right">{fmtCLP(totalRev)}</span>
@@ -1374,7 +1332,7 @@ export default function Orders() {
       .map(([id]) => id)
   }, [allOrders])
 
-  // Envío rápido desde la TableCard (sin entrar al panel)
+  // Envío rápido desde la TableCard
   const handleQuickSend = useCallback(async (order: Order) => {
     const pendingItems = (order.items ?? []).filter(i => i.status === 'pending')
     if (!pendingItems.length || !order.table) return
@@ -1408,21 +1366,21 @@ export default function Orders() {
           <h1 className="font-display text-3xl text-ink font-bold italic">Comandas</h1>
           {/* Live stats */}
           <div className="flex items-center gap-3 mt-1 flex-wrap">
-            <span className="text-sm text-ink-secondary">
+            <span className="text-base text-ink-secondary">
               <span className="font-bold text-ink tabular-nums">{activeCount}</span> mesa{activeCount !== 1 ? 's' : ''} activa{activeCount !== 1 ? 's' : ''}
             </span>
             {inKitchenCount > 0 && (
-              <span className="text-sm text-amber-600 font-semibold">
+              <span className="text-base text-amber-600 font-bold">
                 · {inKitchenCount} en cocina
               </span>
             )}
             {readyCount > 0 && (
-              <span className="text-sm text-[#3B6D11] font-semibold">
+              <span className="text-base text-[#3B6D11] font-bold">
                 · {readyCount} listo{readyCount !== 1 ? 's' : ''}
               </span>
             )}
             {totalRevenue > 0 && (
-              <span className="text-sm text-ink-secondary">
+              <span className="text-base text-ink-secondary">
                 · <span className="font-bold text-calipso tabular-nums">{fmtCLP(totalRevenue)}</span> en curso
               </span>
             )}
@@ -1432,15 +1390,15 @@ export default function Orders() {
         <div className="flex items-center gap-2">
           <Link
             to="/admin/cocina" target="_blank"
-            className="flex items-center gap-1.5 border border-calipso text-calipso text-xs font-semibold px-3 py-2 rounded-input hover:bg-calipso hover:text-white transition-colors"
+            className="flex items-center gap-1.5 border border-calipso text-calipso text-sm font-bold px-4 py-2.5 rounded-input hover:bg-calipso hover:text-white transition-colors"
           >
-            <ChefHat size={13} /> Panel Cocina
+            <ChefHat size={15} /> Panel Cocina
           </Link>
           <button
             onClick={load}
-            className="flex items-center gap-1.5 border border-calipso-100 text-ink-secondary text-xs px-3 py-2 rounded-input hover:bg-calipso-50 transition-colors"
+            className="flex items-center gap-1.5 border border-calipso-100 text-ink-secondary text-sm px-4 py-2.5 rounded-input hover:bg-calipso-50 transition-colors"
           >
-            <RefreshCw size={13} /> {countdown}s
+            <RefreshCw size={14} /> {countdown}s
           </button>
         </div>
       </div>
@@ -1448,21 +1406,21 @@ export default function Orders() {
       {/* ── View tabs ────────────────────────────────────────── */}
       <div className="flex gap-1 mb-4 border-b border-calipso-100 flex-shrink-0">
         {[
-          { id: 'mesas',     label: 'Mesas',              Icon: TableProperties },
-          { id: 'historial', label: 'Historial del día',   Icon: History },
-          { id: 'registro',  label: 'Registro de platos',  Icon: BarChart2 },
+          { id: 'mesas',     label: 'Mesas',             Icon: TableProperties },
+          { id: 'historial', label: 'Historial del día',  Icon: History },
+          { id: 'registro',  label: 'Registro de platos', Icon: BarChart2 },
         ].map(({ id, label, Icon }) => (
           <button
             key={id}
             onClick={() => setView(id as 'mesas' | 'historial' | 'registro')}
             className={clsx(
-              'flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors',
+              'flex items-center gap-2 px-5 py-3.5 text-base font-bold border-b-2 -mb-px transition-colors',
               view === id
                 ? 'border-calipso text-calipso'
                 : 'border-transparent text-ink-secondary hover:text-ink'
             )}
           >
-            <Icon size={15} /> {label}
+            <Icon size={17} /> {label}
           </button>
         ))}
       </div>
@@ -1480,7 +1438,7 @@ export default function Orders() {
         <div className="flex gap-4 flex-1 min-h-0">
 
           {/* Left: floor plan */}
-          <div className="w-56 flex-shrink-0 overflow-y-auto space-y-4">
+          <div className="w-64 flex-shrink-0 overflow-y-auto space-y-4">
             {LOCATIONS.map(loc => {
               const locTables = tables.filter(t => t.location === loc && t.is_active)
               if (locTables.length === 0) return null
@@ -1521,13 +1479,13 @@ export default function Orders() {
               <div className="flex flex-col items-center justify-center h-full text-center p-8">
                 <TableProperties size={40} className="text-calipso/30 mb-4" />
                 <p className="font-display italic text-xl text-ink">Selecciona una mesa</p>
-                <p className="text-sm text-ink-secondary mt-1">Haz clic en cualquier mesa del plano para ver su comanda.</p>
+                <p className="text-base text-ink-secondary mt-1">Haz clic en cualquier mesa del plano para ver su comanda.</p>
                 {activeCount > 0 && (
                   <button
                     onClick={() => setSelectedTable(orders[0].table_id)}
-                    className="mt-4 flex items-center gap-1.5 text-sm text-calipso hover:underline"
+                    className="mt-5 flex items-center gap-2 text-base text-calipso hover:underline font-semibold"
                   >
-                    Ir a la primera mesa activa <ArrowRight size={14} />
+                    Ir a la primera mesa activa <ArrowRight size={16} />
                   </button>
                 )}
               </div>
