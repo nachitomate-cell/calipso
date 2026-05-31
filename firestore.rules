@@ -2,28 +2,99 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Solo usuarios autenticados pueden leer y escribir
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // ── Helper ────────────────────────────────────────────────────────────────
+    function isAdmin() {
+      return request.auth != null;
     }
 
-    // Excepción: reservas — cualquiera puede CREAR (formulario público)
+    // ── Carta pública ─────────────────────────────────────────────────────────
+    // Cualquiera puede leer la carta (menú digital, carta pública)
+    match /categories/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /menu_items/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Mesas ─────────────────────────────────────────────────────────────────
+    // Lectura pública: el POS y el formulario de reservas necesitan listar mesas
+    match /tables/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Reservas ──────────────────────────────────────────────────────────────
+    // Cualquiera puede CREAR (formulario público en /reservas)
+    // Solo admin puede leer, actualizar o eliminar
     match /reservations/{id} {
       allow create: if true;
-      allow read, update, delete: if request.auth != null;
+      allow read, update, delete: if isAdmin();
     }
 
-    // Excepción: chat_sessions y chat_messages — cualquiera puede CREAR y LEER la propia sesión
+    // ── Comandas ─────────────────────────────────────────────────────────────
+    match /orders/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    match /order_items/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── Inventario y Recetas ──────────────────────────────────────────────────
+    match /inventory/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    match /recipes/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── Garzones ─────────────────────────────────────────────────────────────
+    match /waiters/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── Chat ──────────────────────────────────────────────────────────────────
+    // El widget del cliente (sin auth) crea sesiones, envía mensajes y lee
+    // las respuestas del bot/admin para su propia sesión.
     match /chat_sessions/{sessionId} {
+      // Cualquiera puede crear una sesión (widget público)
       allow create: if true;
-      allow read, update: if request.auth != null || resource.data.guest_email == request.auth.token.email;
-      allow delete: if request.auth != null;
+
+      // Cualquiera puede leer UN documento por ID (widget lee su propia sesión)
+      // Solo admin puede listar/consultar todas las sesiones
+      allow get: if true;
+      allow list: if isAdmin();
+
+      // Cualquiera puede actualizar (el widget incrementa unread_admin al enviar)
+      allow update: if true;
+
+      // Solo admin puede eliminar
+      allow delete: if isAdmin();
     }
 
     match /chat_messages/{messageId} {
+      // Cualquiera puede crear mensajes (widget y bot)
       allow create: if true;
+
+      // Cualquiera puede leer mensajes (widget lee respuestas del bot/admin)
+      // No hay datos sensibles relevantes en este contexto
       allow read: if true;
-      allow update, delete: if request.auth != null;
+
+      // Solo admin puede editar o eliminar mensajes
+      allow update, delete: if isAdmin();
+    }
+
+    // ── Clientes y Visitas ────────────────────────────────────────────────────
+    match /customers/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    match /customer_visits/{id} {
+      allow read, write: if isAdmin();
     }
   }
 }

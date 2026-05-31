@@ -2,15 +2,20 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Imágenes de platos — solo admins pueden subir/eliminar, lectura pública
+    // ── Imágenes de platos ────────────────────────────────────────────────────
+    // Lectura pública (carta digital, menú web)
+    // Subida solo para admins, máximo 5 MB, solo imágenes
+    // delete se separa de create/update porque request.resource no existe en delete
     match /dish-images/{imageId} {
       allow read: if true;
-      allow write: if request.auth != null
-                   && request.resource.size < 5 * 1024 * 1024
-                   && request.resource.contentType.matches('image/.*');
+      allow create, update: if request.auth != null
+                            && request.resource.size < 5 * 1024 * 1024
+                            && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null;
     }
 
-    // Todo lo demás requiere autenticación
+    // ── Cualquier otro archivo ────────────────────────────────────────────────
+    // Solo acceso autenticado (exports, documentos internos, etc.)
     match /{allPaths=**} {
       allow read, write: if request.auth != null;
     }
