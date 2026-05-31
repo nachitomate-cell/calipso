@@ -55,13 +55,28 @@ export async function getAllCategories(): Promise<Category[]> {
 }
 
 export async function upsertCategory(cat: Partial<Category> & { name: string; slug: string }): Promise<Category> {
-  if (USE_MOCK) throw new Error('Conecta Firebase para guardar datos')
+  if (USE_MOCK) {
+    const existing = cat.id ? mockCategories.find(c => c.id === cat.id) : null
+    if (existing) { Object.assign(existing, cat); return existing }
+    const nc: Category = {
+      id: `cat-${Date.now()}`, name: cat.name, slug: cat.slug,
+      description: cat.description ?? null, icon: cat.icon ?? null,
+      sort_order: cat.sort_order ?? 99, is_active: cat.is_active ?? true,
+      created_at: new Date().toISOString(),
+    }
+    mockCategories.push(nc)
+    return nc
+  }
   const id = await upsert('categories', cat)
   return { ...cat, id } as Category
 }
 
 export async function deleteCategory(id: string): Promise<void> {
-  if (USE_MOCK) throw new Error('Conecta Firebase para guardar datos')
+  if (USE_MOCK) {
+    const idx = mockCategories.findIndex(c => c.id === id)
+    if (idx >= 0) mockCategories.splice(idx, 1)
+    return
+  }
   await deleteDoc(doc(db, 'categories', id))
 }
 
@@ -95,13 +110,34 @@ export async function getAllMenuItems(): Promise<MenuItem[]> {
 export async function upsertMenuItem(
   item: Partial<MenuItem> & { name: string; category_id: string; price: number }
 ): Promise<MenuItem> {
-  if (USE_MOCK) throw new Error('Conecta Firebase para guardar datos')
+  if (USE_MOCK) {
+    const existing = item.id ? mockMenuItems.find(m => m.id === item.id) : null
+    if (existing) {
+      Object.assign(existing, item, { updated_at: new Date().toISOString() })
+      return { ...existing, category: mockCategories.find(c => c.id === existing.category_id) }
+    }
+    const nm: MenuItem = {
+      id: `item-${Date.now()}`, name: item.name, category_id: item.category_id,
+      description: item.description ?? null, price: item.price,
+      image_url: item.image_url ?? null,
+      is_available: item.is_available ?? true, is_featured: item.is_featured ?? false,
+      is_86d: false, allergens: item.allergens ?? [],
+      sort_order: item.sort_order ?? 99,
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    }
+    mockMenuItems.push(nm)
+    return { ...nm, category: mockCategories.find(c => c.id === nm.category_id) }
+  }
   const id = await upsert('menu_items', { ...item, updated_at: new Date().toISOString() })
   return { ...item, id } as MenuItem
 }
 
 export async function deleteMenuItem(id: string): Promise<void> {
-  if (USE_MOCK) throw new Error('Conecta Firebase para guardar datos')
+  if (USE_MOCK) {
+    const idx = mockMenuItems.findIndex(m => m.id === id)
+    if (idx >= 0) mockMenuItems.splice(idx, 1)
+    return
+  }
   await deleteDoc(doc(db, 'menu_items', id))
 }
 
